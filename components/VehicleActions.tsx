@@ -218,7 +218,7 @@ export default function VehicleActions({ vehicle }: { vehicle: Vehicle }) {
             Mark Funding Released
           </button>
           <p className="text-xs text-ink-muted">
-            Demo simulation of a bank email/portal confirmation.
+            Confirms funding receipt for the dealer and updates DhanFlow instantly.
           </p>
         </div>
       );

@@ -32,7 +32,7 @@ export default function LoginPage() {
     e.preventDefault();
     const match = login(username, password);
     if (!match) {
-      setError("Invalid credentials. Pick a persona card below to autofill a working demo login.");
+      setError("Invalid credentials. Select a persona below to sign in.");
       return;
     }
     router.push(`/${match.role}`);
@@ -57,9 +57,6 @@ export default function LoginPage() {
           <p className="mt-1 text-sm text-ink-muted">
             Invoice-to-delivery visibility for Hyundai Motor India
           </p>
-          <span className="mt-3 inline-flex items-center rounded-full border border-pending/30 bg-pending-bg px-3 py-1 text-xs font-medium text-pending">
-            DEMO — dummy data, no real accounts
-          </span>
         </header>
 
         <div className="grid grid-cols-1 gap-8 rounded-xl border border-border bg-surface p-6 shadow-sm sm:p-8 md:grid-cols-[1.4fr_1fr]">
@@ -68,8 +65,7 @@ export default function LoginPage() {
               Choose a persona
             </h2>
             <p className="mt-1 text-xs text-ink-muted">
-              Six entities, one shared vehicle record. Click a card to autofill its demo
-              login, then sign in.
+              Six entities, one shared vehicle record. Click a card to sign in.
             </p>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {PERSONAS.map((persona) => {
@@ -145,7 +141,7 @@ export default function LoginPage() {
                     setError(null);
                   }}
                   className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
-                  placeholder="demo"
+                  placeholder="Enter password"
                 />
               </div>
 
@@ -166,7 +162,7 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-ink-muted">
-          Mock authentication only — no passwords are hashed, no real accounts exist.
+          Access is scoped to your assigned role.
         </p>
       </div>
     </main>

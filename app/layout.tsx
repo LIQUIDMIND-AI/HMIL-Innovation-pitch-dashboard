@@ -13,7 +13,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "DhanFlow — Invoice-to-Delivery Visibility",
   description:
-    "DhanFlow demo: invoice-to-delivery visibility platform for Hyundai Motor India (HMIL). DEMO — dummy data.",
+    "DhanFlow: invoice-to-delivery visibility platform for Hyundai Motor India (HMIL).",
   icons: {
     icon: "/favicon.svg",
   },

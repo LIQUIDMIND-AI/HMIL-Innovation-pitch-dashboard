@@ -12,9 +12,6 @@ export default function TopBar({ title }: { title: string }) {
         <h1 className="truncate text-sm font-semibold text-ink">{title}</h1>
         <p className="truncate text-xs text-ink-muted">{persona.org}</p>
       </div>
-      <span className="ml-4 shrink-0 whitespace-nowrap rounded-full border border-pending/30 bg-pending-bg px-2.5 py-1 text-[11px] font-medium text-pending">
-        DEMO — dummy data
-      </span>
     </header>
   );
 }
