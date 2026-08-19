@@ -6,10 +6,10 @@ import { ALT_TRUCK_NO, useVehicleStore, LSP_MILESTONES, type LspMilestone } from
 import type { Vehicle } from "@/lib/types";
 
 const PRIMARY_BTN =
-  "rounded-md bg-navy px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-navy-hover disabled:cursor-not-allowed disabled:bg-ink-muted/40 disabled:text-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy";
+  "min-h-11 rounded-md bg-navy px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-navy-hover disabled:cursor-not-allowed disabled:bg-ink-muted/40 disabled:text-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy";
 
 const SECONDARY_BTN =
-  "rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-navy-light disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy";
+  "min-h-11 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-navy-light disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy";
 
 function AddNoteControl({
   vin,

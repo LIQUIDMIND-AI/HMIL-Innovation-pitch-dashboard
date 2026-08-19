@@ -122,7 +122,7 @@ export default function LoginPage() {
                     setUsername(e.target.value);
                     setError(null);
                   }}
-                  className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
+                  className="min-h-11 rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
                   placeholder="e.g. dealer"
                 />
               </div>
@@ -140,7 +140,7 @@ export default function LoginPage() {
                     setPassword(e.target.value);
                     setError(null);
                   }}
-                  className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
+                  className="min-h-11 rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
                   placeholder="Enter password"
                 />
               </div>
@@ -153,7 +153,7 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                className="mt-1 rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-navy-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+                className="mt-1 min-h-11 rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-navy-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
               >
                 Sign in
               </button>

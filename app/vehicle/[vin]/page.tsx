@@ -90,13 +90,21 @@ export default function VehiclePage() {
   return (
     <DashboardShell title={`${vehicle.model} ${vehicle.variant} · •••${vehicle.chassisShort}`}>
       <div className="flex flex-col gap-6">
-        <Link
-          href={`/${role}`}
-          className="inline-flex w-fit items-center gap-1 text-xs font-medium text-ink-muted hover:text-navy"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-          Back to dashboard
-        </Link>
+        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs">
+          <Link
+            href={`/${role}`}
+            className="inline-flex items-center gap-1 font-medium text-ink-muted hover:text-navy"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            Dashboard
+          </Link>
+          <span className="text-ink-muted" aria-hidden="true">
+            /
+          </span>
+          <span className="font-medium text-ink">
+            {vehicle.model} {vehicle.variant} · •••{vehicle.chassisShort}
+          </span>
+        </nav>
 
         <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-surface p-4">
           <div>

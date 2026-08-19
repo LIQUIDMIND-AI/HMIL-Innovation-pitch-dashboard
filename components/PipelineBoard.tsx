@@ -12,13 +12,13 @@ export default function PipelineBoard({
   showLsp?: boolean;
 }) {
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2">
+    <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
       {PIPELINE_COLUMNS.map((col) => {
         const items = vehicles.filter((v) => col.stages.includes(v.stage));
         return (
           <div
             key={col.key}
-            className="flex min-w-[210px] flex-1 flex-col rounded-lg border border-border bg-surface"
+            className="flex min-w-[210px] flex-1 shrink-0 snap-start flex-col rounded-lg border border-border bg-surface"
           >
             <div className="flex items-center justify-between border-b border-border px-3 py-2">
               <h3 className="text-xs font-semibold text-ink">{col.label}</h3>
