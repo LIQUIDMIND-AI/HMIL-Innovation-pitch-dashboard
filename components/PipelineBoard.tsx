@@ -1,22 +1,15 @@
-import type { Stage, Vehicle } from "@/lib/types";
+import type { Vehicle } from "@/lib/types";
+import { PIPELINE_COLUMNS } from "@/lib/selectors";
 import VehicleCard from "./VehicleCard";
-
-/** The six legs of the pipeline (plan.md §6) — FUNDING_PENDING/FUNDING_RECEIVED collapse into one "Funding" column. */
-const PIPELINE_COLUMNS: { key: string; label: string; stages: Stage[] }[] = [
-  { key: "invoiced", label: "Invoiced", stages: ["INVOICED"] },
-  { key: "allocation", label: "Allocation Matched", stages: ["ALLOCATION_MATCHED"] },
-  { key: "funding", label: "Funding", stages: ["FUNDING_PENDING", "FUNDING_RECEIVED"] },
-  { key: "gateout", label: "Gate-out", stages: ["GATE_OUT"] },
-  { key: "transit", label: "In Transit", stages: ["IN_TRANSIT"] },
-  { key: "delivered", label: "Delivered", stages: ["DELIVERED"] },
-];
 
 export default function PipelineBoard({
   vehicles,
   showDealer = true,
+  showLsp = false,
 }: {
   vehicles: Vehicle[];
   showDealer?: boolean;
+  showLsp?: boolean;
 }) {
   return (
     <div className="flex gap-3 overflow-x-auto pb-2">
@@ -38,7 +31,7 @@ export default function PipelineBoard({
                 <p className="px-1 py-6 text-center text-xs text-ink-muted">No vehicles</p>
               ) : (
                 items.map((v) => (
-                  <VehicleCard key={v.vin} vehicle={v} showDealer={showDealer} />
+                  <VehicleCard key={v.vin} vehicle={v} showDealer={showDealer} showLsp={showLsp} />
                 ))
               )}
             </div>

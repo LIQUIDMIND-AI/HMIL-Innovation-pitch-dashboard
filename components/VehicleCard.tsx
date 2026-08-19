@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Truck } from "lucide-react";
 import type { Vehicle } from "@/lib/types";
 import { getVehicleTone } from "@/lib/selectors";
 import { formatINR } from "@/lib/format";
@@ -8,9 +8,11 @@ import StatusChip from "./StatusChip";
 export default function VehicleCard({
   vehicle,
   showDealer = true,
+  showLsp = false,
 }: {
   vehicle: Vehicle;
   showDealer?: boolean;
+  showLsp?: boolean;
 }) {
   const tone = getVehicleTone(vehicle);
   const chipLabel = tone === "clear" ? "CLEAR" : tone === "pending" ? "SUBSTITUTION" : "STUCK";
@@ -34,6 +36,20 @@ export default function VehicleCard({
       </div>
       {showDealer && (
         <span className="truncate text-[11px] text-ink-muted">{vehicle.dealerName}</span>
+      )}
+      {showLsp && vehicle.lsp && (
+        <p
+          className={`flex items-start gap-1 text-[11px] leading-snug ${
+            vehicle.lsp.lastMilestone.toLowerCase().includes("delayed")
+              ? "text-pending"
+              : "text-ink-muted"
+          }`}
+        >
+          <Truck className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+          <span className="line-clamp-2">
+            {vehicle.lsp.route} · ETA {vehicle.lsp.etaDays}d · {vehicle.lsp.lastMilestone}
+          </span>
+        </p>
       )}
       {vehicle.stuckReason && (
         <p

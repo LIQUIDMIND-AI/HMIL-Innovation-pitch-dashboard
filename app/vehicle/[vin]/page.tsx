@@ -158,7 +158,15 @@ export default function VehiclePage() {
               <p className="mt-1 text-ink-muted">
                 {vehicle.lsp.route} · ETA {vehicle.lsp.etaDays}d
               </p>
-              <p className="mt-1 text-ink-muted">{vehicle.lsp.lastMilestone}</p>
+              <p
+                className={`mt-1 font-medium ${
+                  vehicle.lsp.lastMilestone.toLowerCase().includes("delayed")
+                    ? "text-pending"
+                    : "text-ink-muted"
+                }`}
+              >
+                {vehicle.lsp.lastMilestone}
+              </p>
             </div>
           </section>
         )}

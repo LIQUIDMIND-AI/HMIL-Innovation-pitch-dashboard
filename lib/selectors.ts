@@ -1,5 +1,15 @@
 import { DEALERS, DEMO_NOW, VEHICLES } from "./mockData";
-import { STAGE_ORDER, type ChipTone, type Role, type Vehicle } from "./types";
+import { STAGE_ORDER, type ChipTone, type Role, type Stage, type Vehicle } from "./types";
+
+/** The six legs of the pipeline (plan.md §6) — FUNDING_PENDING/FUNDING_RECEIVED collapse into one "Funding" column. */
+export const PIPELINE_COLUMNS: { key: string; label: string; stages: Stage[] }[] = [
+  { key: "invoiced", label: "Invoiced", stages: ["INVOICED"] },
+  { key: "allocation", label: "Allocation Matched", stages: ["ALLOCATION_MATCHED"] },
+  { key: "funding", label: "Funding", stages: ["FUNDING_PENDING", "FUNDING_RECEIVED"] },
+  { key: "gateout", label: "Gate-out", stages: ["GATE_OUT"] },
+  { key: "transit", label: "In Transit", stages: ["IN_TRANSIT"] },
+  { key: "delivered", label: "Delivered", stages: ["DELIVERED"] },
+];
 
 /**
  * The one demo persona each non-HQ/RO role is scoped to. This is a fixed-cast
@@ -121,6 +131,34 @@ export function getRegionalDealerRollup(
   return Array.from(byDealer.entries()).map(([dealerCode, v]) => ({
     dealerCode,
     ...v,
+  }));
+}
+
+/** Vehicle count per pipeline leg, in stage order — the HQ funnel-by-stage chart. */
+export function getPipelineFunnel(
+  vehicles: Vehicle[]
+): { label: string; count: number }[] {
+  return PIPELINE_COLUMNS.map((col) => ({
+    label: col.label,
+    count: vehicles.filter((v) => col.stages.includes(v.stage)).length,
+  }));
+}
+
+/** Average hours from FUNDING_PENDING to FUNDING_RECEIVED, grouped by bank — the HQ funding-lag chart. */
+export function getAvgFundingLagByBank(
+  vehicles: Vehicle[]
+): { bankName: string; avgHours: number }[] {
+  const lagsByBank = new Map<string, number[]>();
+  for (const v of vehicles) {
+    const start = v.stageTimestamps.FUNDING_PENDING;
+    const end = v.stageTimestamps.FUNDING_RECEIVED;
+    if (!start || !end) continue;
+    const lag = hoursSince(start, end);
+    lagsByBank.set(v.bank.name, [...(lagsByBank.get(v.bank.name) ?? []), lag]);
+  }
+  return Array.from(lagsByBank.entries()).map(([bankName, lags]) => ({
+    bankName,
+    avgHours: Math.round(lags.reduce((sum, n) => sum + n, 0) / lags.length),
   }));
 }
 

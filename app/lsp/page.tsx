@@ -21,7 +21,7 @@ function LspDashboard() {
           <h2 id="pipeline-heading" className="mb-2 text-sm font-semibold text-ink">
             Assigned trips
           </h2>
-          <PipelineBoard vehicles={vehicles} />
+          <PipelineBoard vehicles={vehicles} showLsp />
         </section>
 
         <section aria-labelledby="exceptions-heading">
