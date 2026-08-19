@@ -374,11 +374,12 @@ export const VEHICLES: Vehicle[] = [
     overall: "STUCK",
     stuckReason:
       "Bank funding confirmation cites chassis 4912, invoice says 4921 — gate pass blocked until chassis numbers match.",
-    stage: "FUNDING_PENDING",
+    stage: "FUNDING_RECEIVED",
     stageTimestamps: {
       INVOICED: "2026-08-11T09:00:00+05:30",
       ALLOCATION_MATCHED: "2026-08-11T09:10:00+05:30",
       FUNDING_PENDING: "2026-08-11T09:15:00+05:30",
+      FUNDING_RECEIVED: "2026-08-15T10:05:00+05:30",
     },
     notes: [
       {

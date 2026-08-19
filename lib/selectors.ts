@@ -1,6 +1,5 @@
-import { DEALERS } from "./mockData";
-import { VEHICLES } from "./mockData";
-import type { Role, Vehicle } from "./types";
+import { DEALERS, DEMO_NOW, VEHICLES } from "./mockData";
+import type { ChipTone, Role, Vehicle } from "./types";
 
 /**
  * The one demo persona each non-HQ/RO role is scoped to. This is a fixed-cast
@@ -55,6 +54,12 @@ export function isSubstitutionCase(vehicle: Vehicle): boolean {
   return Boolean(vehicle.stuckReason?.toLowerCase().includes("substitut"));
 }
 
+/** CLEAR -> green, substitution-in-progress STUCK -> amber (distinct from a hard mismatch), everything else STUCK -> red. */
+export function getVehicleTone(vehicle: Vehicle): ChipTone {
+  if (vehicle.overall === "CLEAR") return "clear";
+  return isSubstitutionCase(vehicle) ? "pending" : "stuck";
+}
+
 /** ms since a given ISO timestamp, measured against the fixed demo clock (see DEMO_NOW). */
 export function hoursSince(iso: string, demoNowIso: string): number {
   const diffMs = new Date(demoNowIso).getTime() - new Date(iso).getTime();
@@ -95,6 +100,117 @@ export function getRegionalDealerRollup(
     dealerCode,
     ...v,
   }));
+}
+
+export interface KpiItem {
+  label: string;
+  value: string | number;
+  tone?: ChipTone;
+}
+
+const DEMO_TODAY = DEMO_NOW.slice(0, 10);
+
+function average(nums: number[]): number | null {
+  if (nums.length === 0) return null;
+  return Math.round(nums.reduce((sum, n) => sum + n, 0) / nums.length);
+}
+
+/** Role-relevant KPI strip contents (plan.md §6) — computed from role-scoped data only. */
+export function getKpisForRole(role: Role): KpiItem[] {
+  const vehicles = getVehiclesForRole(role);
+  const stuckCount = vehicles.filter((v) => v.overall === "STUCK").length;
+
+  switch (role) {
+    case "hq": {
+      const invoicedToday = vehicles.filter((v) => v.invoice.date === DEMO_TODAY).length;
+      const gateOutHours = vehicles
+        .filter((v) => v.stageTimestamps.GATE_OUT)
+        .map((v) => hoursSince(v.stageTimestamps.INVOICED!, v.stageTimestamps.GATE_OUT!));
+      const avgGateOutHours = average(gateOutHours);
+      const delivered = vehicles.filter((v) => v.stage === "DELIVERED").length;
+      return [
+        { label: "Invoiced Today", value: invoicedToday },
+        { label: "Stuck", value: stuckCount, tone: stuckCount > 0 ? "stuck" : "clear" },
+        {
+          label: "Avg Invoice → Gate-out",
+          value: avgGateOutHours !== null ? `${avgGateOutHours}h` : "—",
+        },
+        { label: "Delivered", value: delivered, tone: "clear" },
+      ];
+    }
+    case "plant": {
+      const readyForGatePass = vehicles.filter(
+        (v) => v.overall === "CLEAR" && v.stage === "FUNDING_RECEIVED"
+      ).length;
+      const substitutions = vehicles.filter(isSubstitutionCase).length;
+      return [
+        { label: "Awaiting Gate Pass", value: vehicles.length },
+        { label: "Blocked", value: stuckCount, tone: stuckCount > 0 ? "stuck" : "clear" },
+        { label: "Ready for Gate Pass", value: readyForGatePass, tone: "clear" },
+        {
+          label: "Substitutions",
+          value: substitutions,
+          tone: substitutions > 0 ? "pending" : "neutral",
+        },
+      ];
+    }
+    case "ro": {
+      const dealerCount = new Set(vehicles.map((v) => v.dealerCode)).size;
+      const slaBreaches = vehicles.filter(
+        (v) =>
+          v.stage === "FUNDING_PENDING" &&
+          v.stageTimestamps.FUNDING_PENDING &&
+          hoursSince(v.stageTimestamps.FUNDING_PENDING, DEMO_NOW) > 72
+      ).length;
+      return [
+        { label: "Total Cars", value: vehicles.length },
+        { label: "Stuck", value: stuckCount, tone: stuckCount > 0 ? "stuck" : "clear" },
+        { label: "Dealers", value: dealerCount },
+        {
+          label: "SLA Breaches (>72h)",
+          value: slaBreaches,
+          tone: slaBreaches > 0 ? "stuck" : "clear",
+        },
+      ];
+    }
+    case "dealer": {
+      const onOrder = vehicles.filter((v) => v.stage !== "DELIVERED").length;
+      const arrivingThisWeek = vehicles.filter((v) => v.stage === "IN_TRANSIT").length;
+      const delivered = vehicles.filter((v) => v.stage === "DELIVERED").length;
+      return [
+        { label: "Cars on Order", value: onOrder },
+        { label: "Stuck", value: stuckCount, tone: stuckCount > 0 ? "stuck" : "clear" },
+        { label: "Arriving This Week", value: arrivingThisWeek },
+        { label: "Delivered", value: delivered, tone: "clear" },
+      ];
+    }
+    case "bank": {
+      const pending = vehicles.filter((v) => v.bank.status === "PENDING").length;
+      const received = vehicles.filter((v) => v.bank.status === "RECEIVED").length;
+      const mismatch = vehicles.filter((v) => v.bank.status === "MISMATCH").length;
+      return [
+        { label: "Funding Requests", value: vehicles.length },
+        { label: "Pending", value: pending, tone: pending > 0 ? "pending" : "neutral" },
+        { label: "Received", value: received, tone: "clear" },
+        { label: "Mismatch", value: mismatch, tone: mismatch > 0 ? "stuck" : "clear" },
+      ];
+    }
+    case "lsp": {
+      const inTransit = vehicles.filter((v) => v.stage === "IN_TRANSIT").length;
+      const delivered = vehicles.filter((v) => v.stage === "DELIVERED").length;
+      const delayed = vehicles.filter((v) =>
+        v.lsp?.lastMilestone.toLowerCase().includes("delayed")
+      ).length;
+      return [
+        { label: "Assigned Trips", value: vehicles.length },
+        { label: "In Transit", value: inTransit },
+        { label: "Delivered", value: delivered, tone: "clear" },
+        { label: "Delayed", value: delayed, tone: delayed > 0 ? "pending" : "clear" },
+      ];
+    }
+    default:
+      return [];
+  }
 }
 
 /** Unit-sanity: run once at import time in dev to catch role-scoping regressions early. */

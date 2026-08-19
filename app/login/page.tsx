@@ -2,25 +2,9 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Building2,
-  Factory,
-  Landmark,
-  MapPin,
-  ShieldCheck,
-  Store,
-  Truck,
-} from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { PERSONAS, useAuth, type Persona } from "@/lib/auth";
-
-const PERSONA_ICONS: Record<Persona["role"], typeof Building2> = {
-  hq: Building2,
-  plant: Factory,
-  ro: MapPin,
-  dealer: Store,
-  bank: Landmark,
-  lsp: Truck,
-};
+import { ROLE_ICONS } from "@/components/PersonaIcon";
 
 export default function LoginPage() {
   const { role, login } = useAuth();
@@ -89,7 +73,7 @@ export default function LoginPage() {
             </p>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {PERSONAS.map((persona) => {
-                const Icon = PERSONA_ICONS[persona.role];
+                const Icon = ROLE_ICONS[persona.role];
                 const isSelected = selectedRole === persona.role;
                 return (
                   <button

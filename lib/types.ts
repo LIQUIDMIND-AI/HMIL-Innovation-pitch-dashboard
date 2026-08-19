@@ -31,6 +31,9 @@ export const STAGE_LABELS: Record<Stage, string> = {
 
 export type CheckStatus = "CLEAR" | "MISMATCH" | "PENDING";
 
+/** Shared semantic tone vocabulary used across status chips and KPI values. */
+export type ChipTone = "clear" | "stuck" | "pending" | "neutral";
+
 export interface Invoice {
   number: string;
   date: string;

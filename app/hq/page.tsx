@@ -1,11 +1,14 @@
 import RoleGate from "@/components/RoleGate";
+import DashboardShell from "@/components/DashboardShell";
+import KpiStrip from "@/components/KpiStrip";
+import { getKpisForRole } from "@/lib/selectors";
 
 export default function HqPage() {
   return (
     <RoleGate role="hq">
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-lg text-ink-muted">hello hq</p>
-      </main>
+      <DashboardShell title="HQ Overview">
+        <KpiStrip items={getKpisForRole("hq")} />
+      </DashboardShell>
     </RoleGate>
   );
 }

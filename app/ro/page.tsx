@@ -1,11 +1,14 @@
 import RoleGate from "@/components/RoleGate";
+import DashboardShell from "@/components/DashboardShell";
+import KpiStrip from "@/components/KpiStrip";
+import { getKpisForRole } from "@/lib/selectors";
 
 export default function RoPage() {
   return (
     <RoleGate role="ro">
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-lg text-ink-muted">hello ro</p>
-      </main>
+      <DashboardShell title="Regional Office — Chandigarh">
+        <KpiStrip items={getKpisForRole("ro")} />
+      </DashboardShell>
     </RoleGate>
   );
 }
