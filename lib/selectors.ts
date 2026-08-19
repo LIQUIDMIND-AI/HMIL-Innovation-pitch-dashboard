@@ -1,5 +1,5 @@
 import { DEALERS, DEMO_NOW, VEHICLES } from "./mockData";
-import type { ChipTone, Role, Vehicle } from "./types";
+import { STAGE_ORDER, type ChipTone, type Role, type Vehicle } from "./types";
 
 /**
  * The one demo persona each non-HQ/RO role is scoped to. This is a fixed-cast
@@ -64,6 +64,21 @@ export function getVehicleTone(vehicle: Vehicle): ChipTone {
 export function hoursSince(iso: string, demoNowIso: string): number {
   const diffMs = new Date(demoNowIso).getTime() - new Date(iso).getTime();
   return Math.round(diffMs / (1000 * 60 * 60));
+}
+
+/** Timestamp of the most advanced stage the vehicle has actually reached. */
+export function getLatestStageTimestamp(vehicle: Vehicle): string | undefined {
+  for (let i = STAGE_ORDER.length - 1; i >= 0; i -= 1) {
+    const ts = vehicle.stageTimestamps[STAGE_ORDER[i]];
+    if (ts) return ts;
+  }
+  return undefined;
+}
+
+/** Hours since the vehicle last moved, against the fixed demo clock — the exception list's age timer. */
+export function getVehicleAgeHours(vehicle: Vehicle): number | null {
+  const ts = getLatestStageTimestamp(vehicle);
+  return ts ? hoursSince(ts, DEMO_NOW) : null;
 }
 
 export function groupByStage(vehicles: Vehicle[]): Record<Vehicle["stage"], Vehicle[]> {
