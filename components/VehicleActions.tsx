@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { useVehicleStore, LSP_MILESTONES, type LspMilestone } from "@/lib/store";
+import { ALT_TRUCK_NO, useVehicleStore, LSP_MILESTONES, type LspMilestone } from "@/lib/store";
 import type { Vehicle } from "@/lib/types";
 
 const PRIMARY_BTN =
@@ -88,8 +88,14 @@ export default function VehicleActions({ vehicle }: { vehicle: Vehicle }) {
         <div className="flex flex-wrap items-start gap-2">
           <button
             type="button"
-            disabled={!vehicle.lsp}
-            title={!vehicle.lsp ? "Carrier not yet assigned (pre gate-out)" : undefined}
+            disabled={!vehicle.lsp || vehicle.lsp.truckNo === ALT_TRUCK_NO}
+            title={
+              !vehicle.lsp
+                ? "Carrier not yet assigned (pre gate-out)"
+                : vehicle.lsp.truckNo === ALT_TRUCK_NO
+                  ? "Already reassigned"
+                  : undefined
+            }
             className={SECONDARY_BTN}
             onClick={() => reassignCarrier(vehicle.vin)}
           >
@@ -199,7 +205,7 @@ export default function VehicleActions({ vehicle }: { vehicle: Vehicle }) {
     }
 
     case "bank": {
-      const canRelease = vehicle.bank.status === "PENDING";
+      const canRelease = vehicle.bank.status === "PENDING" && vehicle.stage === "FUNDING_PENDING";
       return (
         <div className="flex flex-col gap-1.5">
           <button

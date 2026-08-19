@@ -27,8 +27,13 @@ const MILESTONE_TEXT: Record<LspMilestone, string> = {
   "Delivered to Dealer": "Delivered to dealer",
 };
 
-const ALT_CARRIER = { name: "Bharat Roadlines", truckNo: "PB-08-CX-9021" };
-const DEFAULT_CARRIER = { name: "Speedline Logistics", truckNo: "PB-11-AT-9901" };
+/**
+ * "Reassign carrier" only swaps the truck, never the carrier name — the LSP
+ * persona's scope is hardcoded to Speedline Logistics (see LSP_SCOPE_NAME in
+ * selectors.ts), so switching the carrier itself would silently vanish the
+ * vehicle from the LSP's own dashboard mid-demo.
+ */
+export const ALT_TRUCK_NO = "PB-08-CX-9021";
 
 interface VehicleStoreContextValue {
   vehicles: Vehicle[];
@@ -122,8 +127,7 @@ export function VehicleStoreProvider({ children }: { children: ReactNode }) {
     setVehicles((prev) =>
       updateVehicle(prev, vin, (v) => {
         if (!v.lsp) return v;
-        const next = v.lsp.name === DEFAULT_CARRIER.name ? ALT_CARRIER : DEFAULT_CARRIER;
-        return { ...v, lsp: { ...v.lsp, name: next.name, truckNo: next.truckNo } };
+        return { ...v, lsp: { ...v.lsp, truckNo: ALT_TRUCK_NO } };
       })
     );
   }, []);
