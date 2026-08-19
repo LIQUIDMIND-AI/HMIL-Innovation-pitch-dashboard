@@ -20,34 +20,41 @@ const LSP_SCOPE_NAME = "Speedline Logistics";
 /**
  * Single choke point for role-scoped data reads. Pages and components must
  * call this instead of importing VEHICLES directly — that is what makes role
- * isolation structural rather than a UI-only convention.
+ * isolation structural rather than a UI-only convention. Takes a vehicle list
+ * rather than reading VEHICLES itself so it works against both the static
+ * seed data and the live VehicleStoreContext state.
  */
-export function getVehiclesForRole(role: Role): Vehicle[] {
+export function filterVehiclesForRole(vehicles: Vehicle[], role: Role): Vehicle[] {
   switch (role) {
     case "hq":
-      return [...VEHICLES];
+      return [...vehicles];
     case "plant":
-      return VEHICLES.filter((v) => PLANT_STAGES.has(v.stage));
+      return vehicles.filter((v) => PLANT_STAGES.has(v.stage));
     case "ro":
-      return VEHICLES.filter((v) => v.region === RO_SCOPE_REGION);
+      return vehicles.filter((v) => v.region === RO_SCOPE_REGION);
     case "dealer":
-      return VEHICLES.filter((v) => v.dealerCode === DEALER_SCOPE_CODE);
+      return vehicles.filter((v) => v.dealerCode === DEALER_SCOPE_CODE);
     case "bank":
-      return VEHICLES.filter((v) => v.bank.name === BANK_SCOPE_NAME);
+      return vehicles.filter((v) => v.bank.name === BANK_SCOPE_NAME);
     case "lsp":
-      return VEHICLES.filter((v) => v.lsp?.name === LSP_SCOPE_NAME);
+      return vehicles.filter((v) => v.lsp?.name === LSP_SCOPE_NAME);
     default:
       return [];
   }
 }
 
-/** Role-scoped single-vehicle lookup — returns undefined if out of scope, never leaks data across roles. */
-export function getVehicleForRole(role: Role, vin: string): Vehicle | undefined {
-  return getVehiclesForRole(role).find((v) => v.vin === vin);
+/** Convenience wrapper over the static seed data — used for the dev sanity check and any server-only read. */
+export function getVehiclesForRole(role: Role): Vehicle[] {
+  return filterVehiclesForRole(VEHICLES, role);
 }
 
-export function getExceptionsForRole(role: Role): Vehicle[] {
-  return getVehiclesForRole(role).filter((v) => v.overall === "STUCK");
+/** Role-scoped single-vehicle lookup within an arbitrary vehicle list — returns undefined if out of scope, never leaks data across roles. */
+export function findVehicleForRole(
+  vehicles: Vehicle[],
+  role: Role,
+  vin: string
+): Vehicle | undefined {
+  return filterVehiclesForRole(vehicles, role).find((v) => v.vin === vin);
 }
 
 export function isSubstitutionCase(vehicle: Vehicle): boolean {
@@ -130,9 +137,12 @@ function average(nums: number[]): number | null {
   return Math.round(nums.reduce((sum, n) => sum + n, 0) / nums.length);
 }
 
-/** Role-relevant KPI strip contents (plan.md §6) — computed from role-scoped data only. */
-export function getKpisForRole(role: Role): KpiItem[] {
-  const vehicles = getVehiclesForRole(role);
+/**
+ * Role-relevant KPI strip contents (plan.md §6). Takes an already role-scoped
+ * vehicle list so it works against both the static seed data and the live
+ * VehicleStoreContext state.
+ */
+export function getKpisFromVehicles(vehicles: Vehicle[], role: Role): KpiItem[] {
   const stuckCount = vehicles.filter((v) => v.overall === "STUCK").length;
 
   switch (role) {
@@ -226,6 +236,11 @@ export function getKpisForRole(role: Role): KpiItem[] {
     default:
       return [];
   }
+}
+
+/** Convenience wrapper over the static seed data. */
+export function getKpisForRole(role: Role): KpiItem[] {
+  return getKpisFromVehicles(getVehiclesForRole(role), role);
 }
 
 /** Unit-sanity: run once at import time in dev to catch role-scoping regressions early. */

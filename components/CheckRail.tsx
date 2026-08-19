@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import { Check, Clock, X } from "lucide-react";
 import type { CheckStatus, VehicleChecks } from "@/lib/types";
 
@@ -29,15 +32,31 @@ function CheckIcon({ status }: { status: CheckStatus }) {
   return <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />;
 }
 
+/** Re-runs a brief staggered "resolve" animation whenever the check verdicts change (e.g. after funding is confirmed). */
 export default function CheckRail({ checks }: { checks: VehicleChecks }) {
+  const prevRef = useRef(checks);
+  const [justUpdated, setJustUpdated] = useState(false);
+
+  useEffect(() => {
+    const changed = CHECK_ORDER.some((key) => prevRef.current[key] !== checks[key]);
+    prevRef.current = checks;
+    if (!changed) return;
+    setJustUpdated(true);
+    const timer = setTimeout(() => setJustUpdated(false), 900);
+    return () => clearTimeout(timer);
+  }, [checks]);
+
   return (
     <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
-      {CHECK_ORDER.map((key) => {
+      {CHECK_ORDER.map((key, i) => {
         const status = checks[key];
         return (
           <li
             key={key}
-            className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-medium ${TONE_CLASSES[status]}`}
+            style={justUpdated ? { animationDelay: `${i * 60}ms` } : undefined}
+            className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-medium ${
+              TONE_CLASSES[status]
+            } ${justUpdated ? "animate-check-resolve" : ""}`}
           >
             <CheckIcon status={status} />
             <span>{CHECK_LABELS[key]}</span>

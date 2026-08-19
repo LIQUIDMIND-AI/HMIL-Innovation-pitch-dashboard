@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { getVehicleForRole, getVehicleTone } from "@/lib/selectors";
+import { useVehicleStore } from "@/lib/store";
+import { findVehicleForRole, getVehicleTone } from "@/lib/selectors";
 import { STAGE_LABELS, STAGE_ORDER, type Vehicle } from "@/lib/types";
 import DashboardShell from "@/components/DashboardShell";
 import StatusChip from "@/components/StatusChip";
@@ -45,6 +46,7 @@ const ROLES_WITH_NOTES = new Set(["hq", "plant", "ro", "dealer"]);
 export default function VehiclePage() {
   const { vin } = useParams<{ vin: string }>();
   const { role } = useAuth();
+  const { vehicles } = useVehicleStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export default function VehiclePage() {
     );
   }
 
-  const vehicle = getVehicleForRole(role, vin);
+  const vehicle = findVehicleForRole(vehicles, role, vin);
 
   if (!vehicle) {
     return (

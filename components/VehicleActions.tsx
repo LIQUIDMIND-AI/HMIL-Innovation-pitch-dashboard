@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { useVehicleStore, LSP_MILESTONES, type LspMilestone } from "@/lib/store";
 import type { Vehicle } from "@/lib/types";
 
 const PRIMARY_BTN =
@@ -9,80 +11,171 @@ const PRIMARY_BTN =
 const SECONDARY_BTN =
   "rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-navy-light disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy";
 
-const LSP_MILESTONES = [
-  "Departed",
-  "In Transit",
-  "Arrived at Stockyard",
-  "Delivered to Dealer",
-] as const;
+function AddNoteControl({
+  vin,
+  authorRole,
+}: {
+  vin: string;
+  authorRole: "hq" | "ro";
+}) {
+  const { persona } = useAuth();
+  const { addNote } = useVehicleStore();
+  const [expanded, setExpanded] = useState(false);
+  const [text, setText] = useState("");
 
-/**
- * Role-scoped action buttons per plan.md §3. Gating logic (disabled states,
- * tooltips) is wired here; the click handlers become live mutations against
- * VehicleStoreContext in a later build step.
- */
+  if (!persona) return null;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = text.trim();
+    if (!trimmed || !persona) return;
+    addNote(vin, { author: persona.org, role: authorRole, text: trimmed });
+    setText("");
+    setExpanded(false);
+  }
+
+  if (!expanded) {
+    return (
+      <button type="button" className={PRIMARY_BTN} onClick={() => setExpanded(true)}>
+        Add Note
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex w-full flex-col gap-2 sm:w-72">
+      <label htmlFor={`note-${vin}`} className="sr-only">
+        Note text
+      </label>
+      <textarea
+        id={`note-${vin}`}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={2}
+        autoFocus
+        placeholder="Add a note visible on this vehicle's thread…"
+        className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
+      />
+      <div className="flex gap-2">
+        <button type="submit" disabled={!text.trim()} className={PRIMARY_BTN}>
+          Post Note
+        </button>
+        <button
+          type="button"
+          className={SECONDARY_BTN}
+          onClick={() => {
+            setExpanded(false);
+            setText("");
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export default function VehicleActions({ vehicle }: { vehicle: Vehicle }) {
-  const { role } = useAuth();
-  if (!role) return null;
+  const { role, persona } = useAuth();
+  const { receiveFunding, issueGatePass, updateLspMilestone, addNote, reassignCarrier } =
+    useVehicleStore();
+
+  if (!role || !persona) return null;
 
   switch (role) {
     case "hq":
       return (
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={SECONDARY_BTN}>
+        <div className="flex flex-wrap items-start gap-2">
+          <button
+            type="button"
+            disabled={!vehicle.lsp}
+            title={!vehicle.lsp ? "Carrier not yet assigned (pre gate-out)" : undefined}
+            className={SECONDARY_BTN}
+            onClick={() => reassignCarrier(vehicle.vin)}
+          >
             Reassign Carrier
           </button>
-          <button type="button" className={SECONDARY_BTN}>
+          <button
+            type="button"
+            disabled={vehicle.overall !== "STUCK"}
+            className={SECONDARY_BTN}
+            onClick={() =>
+              addNote(vehicle.vin, {
+                author: persona.org,
+                role: "hq",
+                text: "Exception acknowledged by HQ.",
+              })
+            }
+          >
             Acknowledge Exception
           </button>
-          <button type="button" className={PRIMARY_BTN}>
-            Add Note
-          </button>
+          <AddNoteControl vin={vehicle.vin} authorRole="hq" />
         </div>
       );
 
     case "plant": {
       const failingCount = Object.values(vehicle.checks).filter((s) => s !== "CLEAR").length;
-      const canIssueGatePass = failingCount === 0;
+      const atFundingReceived = vehicle.stage === "FUNDING_RECEIVED";
+      const canIssueGatePass = failingCount === 0 && atFundingReceived;
+      const tooltip =
+        failingCount > 0
+          ? `${failingCount} of 5 checks failing`
+          : !atFundingReceived
+            ? "Awaiting funding confirmation"
+            : undefined;
       return (
         <div className="flex flex-col gap-1.5">
           <button
             type="button"
             disabled={!canIssueGatePass}
-            title={!canIssueGatePass ? `${failingCount} of 5 checks failing` : undefined}
+            title={tooltip}
             className={`${PRIMARY_BTN} self-start`}
+            onClick={() => issueGatePass(vehicle.vin)}
           >
             Issue Gate Pass
           </button>
-          {!canIssueGatePass && (
-            <p className="text-xs text-ink-muted">{failingCount} of 5 checks failing</p>
-          )}
+          {tooltip && <p className="text-xs text-ink-muted">{tooltip}</p>}
         </div>
       );
     }
 
     case "ro":
       return (
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={SECONDARY_BTN}>
+        <div className="flex flex-wrap items-start gap-2">
+          <button
+            type="button"
+            disabled={vehicle.overall !== "STUCK"}
+            className={SECONDARY_BTN}
+            onClick={() =>
+              addNote(vehicle.vin, {
+                author: persona.org,
+                role: "ro",
+                text: "Escalated to HQ for review.",
+              })
+            }
+          >
             Escalate to HQ
           </button>
-          <button type="button" className={PRIMARY_BTN}>
-            Add Note
-          </button>
+          <AddNoteControl vin={vehicle.vin} authorRole="ro" />
         </div>
       );
 
     case "dealer": {
-      const canConfirmFunding = vehicle.bank.status === "PENDING";
+      const canConfirmFunding =
+        vehicle.bank.status === "PENDING" && vehicle.stage === "FUNDING_PENDING";
       const canAcknowledgeDelivery = vehicle.stage === "DELIVERED";
       return (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             disabled={!canConfirmFunding}
-            title={!canConfirmFunding ? "Funding confirmation already on file" : undefined}
+            title={
+              !canConfirmFunding
+                ? "Available once a routine funding confirmation is pending"
+                : undefined
+            }
             className={PRIMARY_BTN}
+            onClick={() => receiveFunding(vehicle.vin)}
           >
             Confirm Funding Received
           </button>
@@ -91,6 +184,13 @@ export default function VehicleActions({ vehicle }: { vehicle: Vehicle }) {
             disabled={!canAcknowledgeDelivery}
             title={!canAcknowledgeDelivery ? "Available once the vehicle is delivered" : undefined}
             className={SECONDARY_BTN}
+            onClick={() =>
+              addNote(vehicle.vin, {
+                author: persona.org,
+                role: "dealer",
+                text: "Proof of delivery acknowledged by dealer.",
+              })
+            }
           >
             Acknowledge Delivery (POD)
           </button>
@@ -107,6 +207,7 @@ export default function VehicleActions({ vehicle }: { vehicle: Vehicle }) {
             disabled={!canRelease}
             title={!canRelease ? "No pending funding request for this chassis" : undefined}
             className={`${PRIMARY_BTN} self-start`}
+            onClick={() => receiveFunding(vehicle.vin)}
           >
             Mark Funding Released
           </button>
@@ -120,12 +221,13 @@ export default function VehicleActions({ vehicle }: { vehicle: Vehicle }) {
     case "lsp":
       return (
         <div className="flex flex-wrap gap-2">
-          {LSP_MILESTONES.map((milestone) => (
+          {LSP_MILESTONES.map((milestone: LspMilestone) => (
             <button
               key={milestone}
               type="button"
               disabled={vehicle.stage === "DELIVERED"}
               className={SECONDARY_BTN}
+              onClick={() => updateLspMilestone(vehicle.vin, milestone)}
             >
               {milestone}
             </button>
