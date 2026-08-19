@@ -2,25 +2,25 @@
 
 import RoleGate from "@/components/RoleGate";
 import DashboardShell from "@/components/DashboardShell";
-import KpiStrip from "@/components/KpiStrip";
+import ExceptionList from "@/components/ExceptionList";
 import { useVehicleStore } from "@/lib/store";
-import { filterVehiclesForRole, getKpisFromVehicles } from "@/lib/selectors";
+import { filterVehiclesForRole } from "@/lib/selectors";
 
-function RoDashboard() {
+function RoExceptions() {
   const { vehicles: allVehicles } = useVehicleStore();
   const vehicles = filterVehiclesForRole(allVehicles, "ro");
 
   return (
-    <DashboardShell title="Regional Office — Chandigarh">
-      <KpiStrip items={getKpisFromVehicles(vehicles, "ro")} />
+    <DashboardShell title="Stuck cars — reasons">
+      <ExceptionList vehicles={vehicles} />
     </DashboardShell>
   );
 }
 
-export default function RoPage() {
+export default function RoExceptionsPage() {
   return (
     <RoleGate role="ro">
-      <RoDashboard />
+      <RoExceptions />
     </RoleGate>
   );
 }

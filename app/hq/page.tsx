@@ -3,8 +3,6 @@
 import RoleGate from "@/components/RoleGate";
 import DashboardShell from "@/components/DashboardShell";
 import KpiStrip from "@/components/KpiStrip";
-import PipelineBoard from "@/components/PipelineBoard";
-import ExceptionList from "@/components/ExceptionList";
 import HqCharts from "@/components/HqCharts";
 import { useVehicleStore } from "@/lib/store";
 import { filterVehiclesForRole, getKpisFromVehicles } from "@/lib/selectors";
@@ -23,20 +21,6 @@ function HqDashboard() {
             Analytics
           </h2>
           <HqCharts vehicles={vehicles} />
-        </section>
-
-        <section aria-labelledby="pipeline-heading">
-          <h2 id="pipeline-heading" className="mb-2 text-sm font-semibold text-ink">
-            Pipeline — all regions
-          </h2>
-          <PipelineBoard vehicles={vehicles} />
-        </section>
-
-        <section aria-labelledby="exceptions-heading">
-          <h2 id="exceptions-heading" className="mb-2 text-sm font-semibold text-ink">
-            Exception queue
-          </h2>
-          <ExceptionList vehicles={vehicles} />
         </section>
       </div>
     </DashboardShell>

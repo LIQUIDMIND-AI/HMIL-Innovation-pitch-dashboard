@@ -2,25 +2,25 @@
 
 import RoleGate from "@/components/RoleGate";
 import DashboardShell from "@/components/DashboardShell";
-import KpiStrip from "@/components/KpiStrip";
+import PipelineBoard from "@/components/PipelineBoard";
 import { useVehicleStore } from "@/lib/store";
-import { filterVehiclesForRole, getKpisFromVehicles } from "@/lib/selectors";
+import { filterVehiclesForRole } from "@/lib/selectors";
 
-function RoDashboard() {
+function RoPipeline() {
   const { vehicles: allVehicles } = useVehicleStore();
   const vehicles = filterVehiclesForRole(allVehicles, "ro");
 
   return (
-    <DashboardShell title="Regional Office — Chandigarh">
-      <KpiStrip items={getKpisFromVehicles(vehicles, "ro")} />
+    <DashboardShell title="Regional pipeline">
+      <PipelineBoard vehicles={vehicles} />
     </DashboardShell>
   );
 }
 
-export default function RoPage() {
+export default function RoPipelinePage() {
   return (
     <RoleGate role="ro">
-      <RoDashboard />
+      <RoPipeline />
     </RoleGate>
   );
 }

@@ -2,25 +2,25 @@
 
 import RoleGate from "@/components/RoleGate";
 import DashboardShell from "@/components/DashboardShell";
-import KpiStrip from "@/components/KpiStrip";
+import PipelineBoard from "@/components/PipelineBoard";
 import { useVehicleStore } from "@/lib/store";
-import { filterVehiclesForRole, getKpisFromVehicles } from "@/lib/selectors";
+import { filterVehiclesForRole } from "@/lib/selectors";
 
-function DealerDashboard() {
+function DealerPipeline() {
   const { vehicles: allVehicles } = useVehicleStore();
   const vehicles = filterVehiclesForRole(allVehicles, "dealer");
 
   return (
-    <DashboardShell title="My Vehicles">
-      <KpiStrip items={getKpisFromVehicles(vehicles, "dealer")} />
+    <DashboardShell title="Order pipeline">
+      <PipelineBoard vehicles={vehicles} showDealer={false} />
     </DashboardShell>
   );
 }
 
-export default function DealerPage() {
+export default function DealerPipelinePage() {
   return (
     <RoleGate role="dealer">
-      <DealerDashboard />
+      <DealerPipeline />
     </RoleGate>
   );
 }

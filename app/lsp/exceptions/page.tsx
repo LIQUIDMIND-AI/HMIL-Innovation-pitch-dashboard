@@ -2,25 +2,25 @@
 
 import RoleGate from "@/components/RoleGate";
 import DashboardShell from "@/components/DashboardShell";
-import KpiStrip from "@/components/KpiStrip";
+import ExceptionList from "@/components/ExceptionList";
 import { useVehicleStore } from "@/lib/store";
-import { filterVehiclesForRole, getKpisFromVehicles } from "@/lib/selectors";
+import { filterVehiclesForRole } from "@/lib/selectors";
 
-function LspDashboard() {
+function LspExceptions() {
   const { vehicles: allVehicles } = useVehicleStore();
   const vehicles = filterVehiclesForRole(allVehicles, "lsp");
 
   return (
-    <DashboardShell title="Trip Board">
-      <KpiStrip items={getKpisFromVehicles(vehicles, "lsp")} />
+    <DashboardShell title="Exceptions">
+      <ExceptionList vehicles={vehicles} />
     </DashboardShell>
   );
 }
 
-export default function LspPage() {
+export default function LspExceptionsPage() {
   return (
     <RoleGate role="lsp">
-      <LspDashboard />
+      <LspExceptions />
     </RoleGate>
   );
 }

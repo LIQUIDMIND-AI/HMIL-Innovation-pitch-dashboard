@@ -2,25 +2,25 @@
 
 import RoleGate from "@/components/RoleGate";
 import DashboardShell from "@/components/DashboardShell";
-import KpiStrip from "@/components/KpiStrip";
+import PipelineBoard from "@/components/PipelineBoard";
 import { useVehicleStore } from "@/lib/store";
-import { filterVehiclesForRole, getKpisFromVehicles } from "@/lib/selectors";
+import { filterVehiclesForRole } from "@/lib/selectors";
 
-function PlantDashboard() {
+function PlantQueue() {
   const { vehicles: allVehicles } = useVehicleStore();
   const vehicles = filterVehiclesForRole(allVehicles, "plant");
 
   return (
-    <DashboardShell title="Plant Dispatch Desk">
-      <KpiStrip items={getKpisFromVehicles(vehicles, "plant")} />
+    <DashboardShell title="Gate-out queue">
+      <PipelineBoard vehicles={vehicles} />
     </DashboardShell>
   );
 }
 
-export default function PlantPage() {
+export default function PlantQueuePage() {
   return (
     <RoleGate role="plant">
-      <PlantDashboard />
+      <PlantQueue />
     </RoleGate>
   );
 }

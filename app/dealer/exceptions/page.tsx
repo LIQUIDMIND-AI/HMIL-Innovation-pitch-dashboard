@@ -2,25 +2,25 @@
 
 import RoleGate from "@/components/RoleGate";
 import DashboardShell from "@/components/DashboardShell";
-import KpiStrip from "@/components/KpiStrip";
+import ExceptionList from "@/components/ExceptionList";
 import { useVehicleStore } from "@/lib/store";
-import { filterVehiclesForRole, getKpisFromVehicles } from "@/lib/selectors";
+import { filterVehiclesForRole } from "@/lib/selectors";
 
-function DealerDashboard() {
+function DealerExceptions() {
   const { vehicles: allVehicles } = useVehicleStore();
   const vehicles = filterVehiclesForRole(allVehicles, "dealer");
 
   return (
-    <DashboardShell title="My Vehicles">
-      <KpiStrip items={getKpisFromVehicles(vehicles, "dealer")} />
+    <DashboardShell title="Needs attention">
+      <ExceptionList vehicles={vehicles} />
     </DashboardShell>
   );
 }
 
-export default function DealerPage() {
+export default function DealerExceptionsPage() {
   return (
     <RoleGate role="dealer">
-      <DealerDashboard />
+      <DealerExceptions />
     </RoleGate>
   );
 }

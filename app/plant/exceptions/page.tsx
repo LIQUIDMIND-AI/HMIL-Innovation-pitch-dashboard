@@ -2,25 +2,25 @@
 
 import RoleGate from "@/components/RoleGate";
 import DashboardShell from "@/components/DashboardShell";
-import KpiStrip from "@/components/KpiStrip";
+import ExceptionList from "@/components/ExceptionList";
 import { useVehicleStore } from "@/lib/store";
-import { filterVehiclesForRole, getKpisFromVehicles } from "@/lib/selectors";
+import { filterVehiclesForRole } from "@/lib/selectors";
 
-function PlantDashboard() {
+function PlantExceptions() {
   const { vehicles: allVehicles } = useVehicleStore();
   const vehicles = filterVehiclesForRole(allVehicles, "plant");
 
   return (
-    <DashboardShell title="Plant Dispatch Desk">
-      <KpiStrip items={getKpisFromVehicles(vehicles, "plant")} />
+    <DashboardShell title="Blocked — mismatch reasons">
+      <ExceptionList vehicles={vehicles} />
     </DashboardShell>
   );
 }
 
-export default function PlantPage() {
+export default function PlantExceptionsPage() {
   return (
     <RoleGate role="plant">
-      <PlantDashboard />
+      <PlantExceptions />
     </RoleGate>
   );
 }
