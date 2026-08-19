@@ -3,6 +3,7 @@ import DashboardShell from "@/components/DashboardShell";
 import KpiStrip from "@/components/KpiStrip";
 import StatusChip from "@/components/StatusChip";
 import { getKpisForRole, getVehiclesForRole } from "@/lib/selectors";
+import { formatINR } from "@/lib/format";
 import type { ChipTone } from "@/lib/types";
 
 const STATUS_TONE: Record<"PENDING" | "RECEIVED" | "MISMATCH", ChipTone> = {
@@ -10,14 +11,6 @@ const STATUS_TONE: Record<"PENDING" | "RECEIVED" | "MISMATCH", ChipTone> = {
   RECEIVED: "clear",
   MISMATCH: "stuck",
 };
-
-function formatINR(amount: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 export default function BankPage() {
   const vehicles = getVehiclesForRole("bank");

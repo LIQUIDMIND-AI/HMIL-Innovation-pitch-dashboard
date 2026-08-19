@@ -2,15 +2,8 @@ import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import type { Vehicle } from "@/lib/types";
 import { getVehicleTone } from "@/lib/selectors";
+import { formatINR } from "@/lib/format";
 import StatusChip from "./StatusChip";
-
-function formatINR(amount: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 export default function VehicleCard({
   vehicle,
