@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+:root {
+  --color-canvas: #f4f5f7;
+  --color-surface: #ffffff;
+  --color-border: #e2e4e9;
+  --color-ink: #101828;
+  --color-ink-muted: #5b6472;
+
+  --color-navy: #0b2447;
+  --color-navy-hover: #133766;
+  --color-navy-light: #eaf0f9;
+
+  --color-clear: #16a34a;
+  --color-clear-bg: #eafaf0;
+  --color-stuck: #dc2626;
+  --color-stuck-bg: #fdecec;
+  --color-pending: #d97706;
+  --color-pending-bg: #fdf2e2;
+
+  --font-mono-stack: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@theme inline {
+  --color-canvas: var(--color-canvas);
+  --color-surface: var(--color-surface);
+  --color-border: var(--color-border);
+  --color-ink: var(--color-ink);
+  --color-ink-muted: var(--color-ink-muted);
+
+  --color-navy: var(--color-navy);
+  --color-navy-hover: var(--color-navy-hover);
+  --color-navy-light: var(--color-navy-light);
+
+  --color-clear: var(--color-clear);
+  --color-clear-bg: var(--color-clear-bg);
+  --color-stuck: var(--color-stuck);
+  --color-stuck-bg: var(--color-stuck-bg);
+  --color-pending: var(--color-pending);
+  --color-pending-bg: var(--color-pending-bg);
+
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-mono-stack);
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.font-mono-vin {
+  font-family: var(--font-mono-stack), ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.02em;
+}
+
+* {
+  scrollbar-width: thin;
+}
