@@ -1,4 +1,12 @@
-import type { Trip, Vehicle } from "./types";
+import type {
+  AvailabilityRecord,
+  ComplianceDoc,
+  DocKind,
+  Order,
+  Role,
+  Trip,
+  Vehicle,
+} from "./types";
 
 /**
  * Fixed reference instant for the whole demo. All "age" / SLA-breach timers
@@ -25,6 +33,13 @@ export const DEALERS = {
 } as const;
 
 const LSP_SPEEDLINE = "Speedline Logistics";
+
+/** Which dealer-finance desk funds a given dealer — used when new invoices are raised. */
+export function bankForDealer(dealerCode: string): string {
+  return dealerCode === DEALERS.METRO.dealerCode
+    ? DEALERS.METRO.bankName
+    : DEALERS.KRISHNA.bankName;
+}
 
 export const VEHICLES: Vehicle[] = [
   // ---- 5 fully CLEAR, various stages (happy path) ----
@@ -674,14 +689,41 @@ export const VEHICLES: Vehicle[] = [
 ];
 
 /**
- * Two seeded trips for the tracking screen — one running to promise, one two
- * days late. Coordinates are in the TrackingMap viewBox (0 0 480 560); the
- * paths are hardcoded so the truck animates identically on every load.
+ * Two seeded trips for the tracking screen. Routes are the real NH-44 corridor
+ * as [lat, lng] waypoints, drawn over OpenStreetMap tiles; the truck marker
+ * interpolates along them. One trip runs to promise, one is two days late.
  */
-const ROUTE_CHANDIGARH =
-  "M202,397 C198,360 194,320 190,283 C184,244 172,205 164,178 C162,168 160,157 158,148";
-const ROUTE_LUDHIANA =
-  "M202,397 C198,360 194,320 190,283 C184,244 172,205 164,178 C162,168 154,156 145,145";
+const NH44_SOUTH: [number, number][] = [
+  [12.9675, 79.943],
+  [13.63, 79.42],
+  [14.47, 78.82],
+  [15.83, 78.04],
+  [17.385, 78.487],
+  [18.67, 78.09],
+  [19.67, 78.53],
+  [21.146, 79.088],
+];
+
+const NH44_NORTH: [number, number][] = [
+  [23.18, 79.95],
+  [25.45, 78.57],
+  [27.18, 78.01],
+  [28.61, 77.21],
+];
+
+const ROUTE_CHANDIGARH: [number, number][] = [
+  ...NH44_SOUTH,
+  ...NH44_NORTH,
+  [29.69, 76.99],
+  [30.733, 76.779],
+];
+
+const ROUTE_LUDHIANA: [number, number][] = [
+  ...NH44_SOUTH,
+  ...NH44_NORTH,
+  [29.39, 76.97],
+  [30.9, 75.857],
+];
 
 export const TRIPS: Trip[] = [
   {
@@ -696,26 +738,32 @@ export const TRIPS: Trip[] = [
     status: "ON_TIME",
     daysLate: 0,
     progress: 0.62,
-    path: ROUTE_CHANDIGARH,
+    route: ROUTE_CHANDIGARH,
     milestones: [
       {
         label: "Gate-out, Sriperumbudur",
         at: "2026-08-17T08:10:00+05:30",
         reached: true,
         t: 0,
-        cx: 202,
-        cy: 397,
+        lat: 12.9675,
+        lng: 79.943,
       },
       {
         label: "Hub — Nagpur",
         at: "2026-08-18T21:35:00+05:30",
         reached: true,
         t: 0.45,
-        cx: 190,
-        cy: 283,
+        lat: 21.146,
+        lng: 79.088,
       },
-      { label: "Hub — Delhi", reached: false, t: 0.87, cx: 164, cy: 178 },
-      { label: "Dealer yard, Chandigarh", reached: false, t: 1, cx: 158, cy: 148 },
+      { label: "Hub — Delhi", reached: false, t: 0.87, lat: 28.61, lng: 77.21 },
+      {
+        label: "Dealer yard, Chandigarh",
+        reached: false,
+        t: 1,
+        lat: 30.733,
+        lng: 76.779,
+      },
     ],
   },
   {
@@ -730,26 +778,392 @@ export const TRIPS: Trip[] = [
     status: "DELAYED",
     daysLate: 2,
     progress: 0.45,
-    path: ROUTE_LUDHIANA,
+    route: ROUTE_LUDHIANA,
     milestones: [
       {
         label: "Gate-out, Sriperumbudur",
         at: "2026-08-16T07:45:00+05:30",
         reached: true,
         t: 0,
-        cx: 202,
-        cy: 397,
+        lat: 12.9675,
+        lng: 79.943,
       },
       {
         label: "Hub — Nagpur (held for inspection)",
         at: "2026-08-18T13:20:00+05:30",
         reached: true,
         t: 0.45,
-        cx: 190,
-        cy: 283,
+        lat: 21.146,
+        lng: 79.088,
       },
-      { label: "Hub — Delhi", reached: false, t: 0.87, cx: 164, cy: 178 },
-      { label: "Dealer yard, Ludhiana", reached: false, t: 1, cx: 145, cy: 145 },
+      { label: "Hub — Delhi", reached: false, t: 0.87, lat: 28.61, lng: 77.21 },
+      { label: "Dealer yard, Ludhiana", reached: false, t: 1, lat: 30.9, lng: 75.857 },
     ],
   },
 ];
+
+/* ---------------------------------------------------------------------------
+ * ERP seed — what the plant can ship today and what it can build
+ * ------------------------------------------------------------------------ */
+
+/** Deliberately mixed: lines with stock, lines with none, and a long-lead line. */
+export const AVAILABILITY: AvailabilityRecord[] = [
+  {
+    model: "Creta",
+    variant: "SX(O)",
+    colours: ["Titan Grey", "Atlas White", "Fiery Red"],
+    readyToTransport: 3,
+    buildSlotDays: 12,
+    buildSlotCapacity: 40,
+    price: 1570000,
+    gst: 440000,
+  },
+  {
+    model: "Creta",
+    variant: "SX",
+    colours: ["Titan Grey", "Atlas White"],
+    readyToTransport: 0,
+    buildSlotDays: 9,
+    buildSlotCapacity: 25,
+    price: 1480000,
+    gst: 415000,
+  },
+  {
+    model: "Creta",
+    variant: "E",
+    colours: ["Atlas White", "Titan Grey"],
+    readyToTransport: 5,
+    buildSlotDays: 8,
+    buildSlotCapacity: 30,
+    price: 1240000,
+    gst: 348000,
+  },
+  {
+    model: "Venue",
+    variant: "S",
+    colours: ["Atlas White", "Titan Grey"],
+    readyToTransport: 6,
+    buildSlotDays: 7,
+    buildSlotCapacity: 30,
+    price: 725000,
+    gst: 205000,
+  },
+  {
+    model: "i20",
+    variant: "SX",
+    colours: ["Fiery Red", "Atlas White"],
+    readyToTransport: 2,
+    buildSlotDays: 10,
+    buildSlotCapacity: 20,
+    price: 980000,
+    gst: 275000,
+  },
+  {
+    model: "Exter",
+    variant: "S",
+    colours: ["Atlas White", "Ranger Khaki"],
+    readyToTransport: 4,
+    buildSlotDays: 6,
+    buildSlotCapacity: 35,
+    price: 760000,
+    gst: 215000,
+  },
+  {
+    model: "Verna",
+    variant: "SX",
+    colours: ["Titan Grey", "Fiery Red"],
+    readyToTransport: 0,
+    buildSlotDays: 21,
+    buildSlotCapacity: 8,
+    price: 1690000,
+    gst: 475000,
+  },
+];
+
+/** Seeded orders covering every state the ERP screens have to render. */
+export const ORDERS: Order[] = [
+  {
+    id: "ORD-KRD-2026-0311",
+    ...DEALERS.KRISHNA,
+    model: "Creta",
+    variant: "SX(O)",
+    colour: "Titan Grey",
+    qty: 2,
+    reference: "Diwali retail block — top-up",
+    requestedDelivery: "2026-09-05",
+    placedBy: "Rajesh Bansal",
+    placedAt: "2026-08-18T10:20:00+05:30",
+    status: "SUBMITTED",
+    invoicedVins: [],
+  },
+  {
+    id: "ORD-KRD-2026-0312",
+    ...DEALERS.KRISHNA,
+    model: "Verna",
+    variant: "SX",
+    colour: "Fiery Red",
+    qty: 3,
+    reference: "Corporate fleet enquiry",
+    requestedDelivery: "2026-08-29",
+    placedBy: "Rajesh Bansal",
+    placedAt: "2026-08-19T09:05:00+05:30",
+    status: "SUBMITTED",
+    invoicedVins: [],
+  },
+  {
+    id: "ORD-KRD-2026-0309",
+    ...DEALERS.KRISHNA,
+    model: "Venue",
+    variant: "S",
+    colour: "Atlas White",
+    qty: 4,
+    reference: "Festive display stock",
+    requestedDelivery: "2026-08-28",
+    placedBy: "Rajesh Bansal",
+    placedAt: "2026-08-14T15:40:00+05:30",
+    status: "VERIFIED",
+    plan: {
+      verdict: "FROM_STOCK",
+      fromStock: 4,
+      toManufacture: 0,
+      transportBy: "2026-08-22",
+      promisedDelivery: "2026-08-26",
+    },
+    verifiedBy: "Ananya Sharma",
+    verifiedAt: "2026-08-15T11:15:00+05:30",
+    invoicedVins: [],
+  },
+  {
+    id: "ORD-MHL-2026-0288",
+    ...DEALERS.METRO,
+    model: "i20",
+    variant: "SX",
+    colour: "Fiery Red",
+    qty: 3,
+    reference: "Ludhiana retail plan",
+    requestedDelivery: "2026-09-10",
+    placedBy: "Simran Kaur",
+    placedAt: "2026-08-12T12:00:00+05:30",
+    status: "VERIFIED",
+    plan: {
+      verdict: "PART_STOCK",
+      fromStock: 2,
+      toManufacture: 1,
+      manufactureBy: "2026-08-31",
+      transportBy: "2026-09-01",
+      promisedDelivery: "2026-09-05",
+    },
+    verifiedBy: "Ananya Sharma",
+    verifiedAt: "2026-08-13T10:05:00+05:30",
+    invoicedVins: [],
+  },
+  {
+    id: "ORD-KRD-2026-0305",
+    ...DEALERS.KRISHNA,
+    model: "Exter",
+    variant: "S",
+    colour: "Atlas White",
+    qty: 1,
+    reference: "Walk-in booking",
+    requestedDelivery: "2026-08-20",
+    placedBy: "Rajesh Bansal",
+    placedAt: "2026-08-06T09:30:00+05:30",
+    status: "INVOICED",
+    plan: {
+      verdict: "FROM_STOCK",
+      fromStock: 1,
+      toManufacture: 0,
+      transportBy: "2026-08-13",
+      promisedDelivery: "2026-08-17",
+    },
+    verifiedBy: "Ananya Sharma",
+    verifiedAt: "2026-08-07T09:45:00+05:30",
+    invoicedVins: ["MALBB51RLSM104004"],
+  },
+  {
+    id: "ORD-MHL-2026-0301",
+    ...DEALERS.METRO,
+    model: "Tucson",
+    variant: "Platinum",
+    colour: "Titan Grey",
+    qty: 2,
+    reference: "Premium enquiry",
+    requestedDelivery: "2026-09-01",
+    placedBy: "Simran Kaur",
+    placedAt: "2026-08-16T16:10:00+05:30",
+    status: "REJECTED",
+    plan: {
+      verdict: "CONSTRAINED",
+      fromStock: 0,
+      toManufacture: 0,
+      transportBy: "—",
+      promisedDelivery: "—",
+      constraint: "Tucson Platinum is not on the Chandigarh RO allocation plan for this quarter.",
+    },
+    verifiedBy: "Ananya Sharma",
+    verifiedAt: "2026-08-17T10:30:00+05:30",
+    rejectionReason:
+      "Tucson Platinum is not on the Chandigarh RO allocation plan for this quarter — raise via the RO for a plan amendment.",
+    invoicedVins: [],
+  },
+];
+
+/* ---------------------------------------------------------------------------
+ * Document seed
+ * ------------------------------------------------------------------------ */
+
+const DOC_SHARING: Record<DocKind, { issuedBy: Role; sharedWith: Role[] }> = {
+  INVOICE: { issuedBy: "hq", sharedWith: ["plant", "ro", "dealer", "bank"] },
+  ALLOCATION: { issuedBy: "hq", sharedWith: ["plant", "ro", "dealer"] },
+  PRICE_CIRCULAR: { issuedBy: "hq", sharedWith: ["plant", "ro", "dealer"] },
+  // The bank issues once, and both the manufacturer and the dealer have it.
+  FUNDING_CONFIRMATION: { issuedBy: "bank", sharedWith: ["hq", "plant", "ro", "dealer"] },
+  EWAY_BILL: { issuedBy: "plant", sharedWith: ["hq", "lsp", "dealer"] },
+  DELIVERY_CHALLAN: { issuedBy: "plant", sharedWith: ["hq", "lsp", "dealer"] },
+  POD: { issuedBy: "lsp", sharedWith: ["hq", "ro", "dealer"] },
+};
+
+/** The document kinds a role is entitled to see at all — used so "missing document" rules only fire for parties that would actually hold it. */
+export function docKindsVisibleTo(role: Role): Set<DocKind> {
+  return new Set(
+    (Object.keys(DOC_SHARING) as DocKind[]).filter(
+      (kind) => DOC_SHARING[kind].issuedBy === role || DOC_SHARING[kind].sharedWith.includes(role)
+    )
+  );
+}
+
+export function makeDoc(
+  vin: string,
+  kind: DocKind,
+  reference: string,
+  issuedAt: string,
+  fields: Record<string, string>
+): ComplianceDoc {
+  return {
+    id: `${vin}-${kind}`,
+    vin,
+    kind,
+    reference,
+    issuedAt,
+    fields,
+    ...DOC_SHARING[kind],
+  };
+}
+
+/**
+ * Document-level defects seeded on otherwise-clean cars. They exist so the
+ * compliance engine has something to catch that the five stuck cars don't
+ * already show — a wrong dealer code on a challan, a missing e-way bill, an
+ * unfilled IRN, a short-paid funding confirmation.
+ */
+interface DocDefect {
+  drop?: DocKind[];
+  patch?: Partial<Record<DocKind, Record<string, string>>>;
+  /** Rupees the bank under-released against the invoice — applied to the confirmation. */
+  fundingShortBy?: number;
+}
+
+const DOC_DEFECTS: Record<string, DocDefect> = {
+  // Challan raised against a neighbouring dealer code.
+  MALBB51RLSM104013: { patch: { DELIVERY_CHALLAN: { dealerCode: "KRD-CHD-041" } } },
+  // Gate-out happened, e-way bill never got attached.
+  MALBB51RLSM104004: { drop: ["EWAY_BILL"] },
+  // Invoice uploaded before the IRN came back from the IRP.
+  MALBB51RLSM104002: { patch: { INVOICE: { irn: "" } } },
+  // Bank confirmed ₹10,000 short of the invoice total.
+  MALBB51RLSM104005: { fundingShortBy: 10000 },
+  // Allocation advice was raised for the lower variant — the paper trail the
+  // vehicle's own stuck reason describes.
+  MALBB51RLSM104010: { patch: { ALLOCATION: { variant: "SX" } } },
+};
+
+/** Builds the seeded document set for a vehicle list — deterministic, no I/O. */
+export function buildDocuments(vehicles: Vehicle[]): ComplianceDoc[] {
+  const docs: ComplianceDoc[] = [];
+
+  for (const v of vehicles) {
+    const defect = DOC_DEFECTS[v.vin];
+    const total = v.invoice.amount + v.invoice.gst;
+    const invoicedAt = v.stageTimestamps.INVOICED ?? `${v.invoice.date}T09:00:00+05:30`;
+
+    const push = (kind: DocKind, reference: string, issuedAt: string, fields: Record<string, string>) => {
+      if (defect?.drop?.includes(kind)) return;
+      docs.push(makeDoc(v.vin, kind, reference, issuedAt, { ...fields, ...(defect?.patch?.[kind] ?? {}) }));
+    };
+
+    push("PRICE_CIRCULAR", v.priceCircularRef, `${v.priceCircularRef.slice(3)}T00:00:00+05:30`, {
+      reference: v.priceCircularRef,
+      effectiveFrom: v.priceCircularRef.slice(3),
+      model: v.model,
+      variant: v.variant,
+      exShowroom: String(v.invoice.amount),
+    });
+
+    push("ALLOCATION", v.allocationRef, invoicedAt, {
+      allocationRef: v.allocationRef,
+      chassis: v.chassisShort,
+      model: v.model,
+      variant: v.variant,
+      colour: v.colour,
+      dealerCode: v.dealerCode,
+    });
+
+    push("INVOICE", v.invoice.number, invoicedAt, {
+      invoiceNo: v.invoice.number,
+      invoiceDate: v.invoice.date,
+      chassis: v.chassisShort,
+      model: v.model,
+      variant: v.variant,
+      colour: v.colour,
+      dealerCode: v.dealerCode,
+      amount: String(v.invoice.amount),
+      gst: String(v.invoice.gst),
+      total: String(total),
+      priceCircularRef: v.priceCircularRef,
+      irn: v.invoice.irn,
+    });
+
+    if (v.bank.status !== "PENDING" && v.bank.receivedAt) {
+      push("FUNDING_CONFIRMATION", `FC-${v.chassisShort}-2026`, v.bank.receivedAt, {
+        bank: v.bank.name,
+        chassis: v.bank.chassisOnConfirmation ?? "",
+        amount: String((v.bank.amount ?? 0) - (defect?.fundingShortBy ?? 0)),
+        receivedAt: v.bank.receivedAt,
+        dealerCode: v.dealerCode,
+      });
+    }
+
+    const gateOut = v.stageTimestamps.GATE_OUT;
+    if (gateOut) {
+      push("EWAY_BILL", `EWB-${v.chassisShort}-8841`, gateOut, {
+        ewbNo: `EWB-${v.chassisShort}-8841`,
+        chassis: v.chassisShort,
+        truckNo: v.lsp?.truckNo ?? "—",
+        from: "Sriperumbudur (TN)",
+        to: v.region,
+        validTill: "2026-08-25",
+      });
+      push("DELIVERY_CHALLAN", `DC-${v.chassisShort}-2026`, gateOut, {
+        challanNo: `DC-${v.chassisShort}-2026`,
+        chassis: v.chassisShort,
+        dealerCode: v.dealerCode,
+        dealerName: v.dealerName,
+        truckNo: v.lsp?.truckNo ?? "—",
+      });
+    }
+
+    const delivered = v.stageTimestamps.DELIVERED;
+    if (delivered) {
+      push("POD", `POD-${v.chassisShort}`, delivered, {
+        chassis: v.chassisShort,
+        receivedBy: v.dealerName,
+        at: delivered,
+        condition: "No transit damage reported",
+      });
+    }
+  }
+
+  return docs;
+}
+
+export const DOCUMENTS: ComplianceDoc[] = buildDocuments(VEHICLES);

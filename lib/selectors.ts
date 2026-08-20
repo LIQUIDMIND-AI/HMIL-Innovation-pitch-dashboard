@@ -1,9 +1,20 @@
-import { DEALERS, DEMO_NOW, TRIPS, VEHICLES } from "./mockData";
+import {
+  AVAILABILITY,
+  DEALERS,
+  DEMO_NOW,
+  TRIPS,
+  VEHICLES,
+  docKindsVisibleTo,
+} from "./mockData";
+import { buildComplianceReport, validateAll, type ComplianceReport } from "./compliance";
 import {
   STAGE_ORDER,
   type ChipTone,
   type Role,
   type Stage,
+  type ComplianceDoc,
+  type ComplianceFinding,
+  type Order,
   type Trip,
   type Vehicle,
 } from "./types";
@@ -372,4 +383,93 @@ export function getTripVehicles(vehicles: Vehicle[], role: Role, trip: Trip): Ve
   return trip.vins
     .map((vin) => scoped.find((v) => v.vin === vin))
     .filter((v): v is Vehicle => Boolean(v));
+}
+
+/* ---------------------------------------------------------------------------
+ * ERP + document scoping — same choke-point rule as the vehicle reads above
+ * ------------------------------------------------------------------------ */
+
+/**
+ * Orders a role may see: the dealer sees only its own book, the RO its region,
+ * the manufacturer everything, and the plant only what has actually been
+ * committed to it. The bank and the transporter have no business in the order
+ * book at all.
+ */
+export function getOrdersForRole(orders: Order[], role: Role): Order[] {
+  switch (role) {
+    case "hq":
+      return orders;
+    case "ro":
+      return orders.filter((o) => o.region === RO_SCOPE_REGION);
+    case "dealer":
+      return orders.filter((o) => o.dealerCode === DEALER_SCOPE_CODE);
+    case "plant":
+      return orders.filter((o) => o.status === "VERIFIED" || o.status === "INVOICED");
+    default:
+      return [];
+  }
+}
+
+/**
+ * A document is visible when the role raised it or was shared on it — and only
+ * for cars already inside that role's vehicle scope. Both conditions have to
+ * hold, so a shared-with list can never widen a role's data window.
+ */
+export function getDocumentsForRole(
+  documents: ComplianceDoc[],
+  vehicles: Vehicle[],
+  role: Role
+): ComplianceDoc[] {
+  const scoped = new Set(filterVehiclesForRole(vehicles, role).map((v) => v.vin));
+  return documents.filter(
+    (d) => scoped.has(d.vin) && (d.issuedBy === role || d.sharedWith.includes(role))
+  );
+}
+
+export function getDocumentsForVehicle(
+  documents: ComplianceDoc[],
+  vehicles: Vehicle[],
+  role: Role,
+  vin: string
+): ComplianceDoc[] {
+  return getDocumentsForRole(documents, vehicles, role).filter((d) => d.vin === vin);
+}
+
+/** The compliance report as one role sees it — scoped vehicles, scoped documents. */
+export function getComplianceReportForRole(
+  vehicles: Vehicle[],
+  documents: ComplianceDoc[],
+  role: Role
+): ComplianceReport {
+  return buildComplianceReport(
+    filterVehiclesForRole(vehicles, role),
+    getDocumentsForRole(documents, vehicles, role),
+    docKindsVisibleTo(role)
+  );
+}
+
+/** Open findings for a role, criticals first — the alert feed. */
+export function getAlertsForRole(
+  vehicles: Vehicle[],
+  documents: ComplianceDoc[],
+  role: Role
+): ComplianceFinding[] {
+  return validateAll(
+    filterVehiclesForRole(vehicles, role),
+    getDocumentsForRole(documents, vehicles, role),
+    docKindsVisibleTo(role)
+  );
+}
+
+/** The production lines a dealer can book against — read through the selector layer like everything else. */
+export const AVAILABLE_LINES = AVAILABILITY;
+
+/** Findings on a single car, scoped to what the role can actually see. */
+export function getAlertsForVehicle(
+  vehicles: Vehicle[],
+  documents: ComplianceDoc[],
+  role: Role,
+  vin: string
+): ComplianceFinding[] {
+  return getAlertsForRole(vehicles, documents, role).filter((f) => f.vin === vin);
 }

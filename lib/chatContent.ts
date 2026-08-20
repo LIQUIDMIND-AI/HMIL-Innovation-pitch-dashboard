@@ -57,6 +57,16 @@ export const CHAT_SCRIPTS: Record<Role, ChatQa[]> = {
       snippet: { kind: "vehicle", vin: VARIANT_CASE },
     },
     {
+      q: "Which dealer orders are waiting on me?",
+      a: "Two bookings from Krishna Hyundai are unverified — a Creta SX(O) pair that can go off stock, and three Verna SX that need a build slot and will land after the date the dealer asked for.",
+      snippet: { kind: "link", href: "/hq/orders", label: "Open the order book" },
+    },
+    {
+      q: "Are any documents out of line?",
+      a: "The rulebook is flagging a chassis mismatch, a superseded price circular, a challan raised against the wrong dealer code, a short-paid funding confirmation and two missing attachments.",
+      snippet: { kind: "link", href: "/hq/compliance", label: "Open the compliance report" },
+    },
+    {
       q: "What would fixing this be worth?",
       a: "Every stuck car is dealer working capital parked at the plant. Cutting the invoice-to-gate-out wait on these five cars alone frees the yard and pulls forward retail — without a single follow-up phone call.",
     },
@@ -140,6 +150,16 @@ export const CHAT_SCRIPTS: Record<Role, ChatQa[]> = {
       snippet: { kind: "vehicle", vin: FUNDING_PENDING_KRISHNA },
     },
     {
+      q: "Can I book more cars for Diwali?",
+      a: "Yes — the booking desk checks the plant's live position as you type, so you know before you submit whether the cars come off stock or need a build slot.",
+      snippet: { kind: "link", href: "/dealer/orders", label: "Book an order" },
+    },
+    {
+      q: "Are my papers in order?",
+      a: "Mostly. The rulebook is holding one chassis mismatch and one price-circular problem against your cars, plus a challan raised on the wrong dealer code that nobody would have caught by eye.",
+      snippet: { kind: "link", href: "/dealer/compliance", label: "Open the compliance report" },
+    },
+    {
       q: "Which cars have I already received?",
       a: "Chassis 4001, the Titan Grey Creta SX(O), was delivered to your yard on 8 August — invoice to delivery in six days with no phone calls in between.",
       snippet: { kind: "vehicle", vin: DELIVERED_KRISHNA },
@@ -164,6 +184,11 @@ export const CHAT_SCRIPTS: Record<Role, ChatQa[]> = {
     {
       q: "What happens when I mark funding released?",
       a: "The status flips on the one shared record: the dealer sees it, the plant's checks re-run, and — if everything matches — the car becomes gate-pass eligible immediately.",
+    },
+    {
+      q: "Who sees my confirmation once I issue it?",
+      a: "The manufacturer, the plant, the regional office and the dealer — all at the same instant, on the same record. There is no forwarding step and no second copy to reconcile.",
+      snippet: { kind: "link", href: "/bank/documents", label: "Open the documents desk" },
     },
     {
       q: "Does DhanFlow send you documents?",

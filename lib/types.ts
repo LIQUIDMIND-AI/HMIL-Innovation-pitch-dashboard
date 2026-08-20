@@ -103,9 +103,8 @@ export interface TripMilestone {
   reached: boolean;
   /** Fraction along the route, 0–1 — drives the timeline below the map. */
   t: number;
-  /** Hardcoded position in the map viewBox, so dots paint instantly with no path sampling. */
-  cx: number;
-  cy: number;
+  lat: number;
+  lng: number;
 }
 
 export interface Trip {
@@ -121,9 +120,142 @@ export interface Trip {
   status: "ON_TIME" | "DELAYED";
   /** Days late vs the promise date; 0 when on time. */
   daysLate: number;
-  /** How far along the drawn route the truck currently is, 0–1. */
+  /** How far along the route the truck currently is, 0–1. */
   progress: number;
-  /** SVG path the truck runs along, in the tracking map's viewBox. */
-  path: string;
+  /** The road corridor as [lat, lng] waypoints, drawn over OpenStreetMap tiles. */
+  route: [number, number][];
   milestones: TripMilestone[];
+}
+
+/* ---------------------------------------------------------------------------
+ * ERP — dealer order booking and manufacturer-side verification
+ * ------------------------------------------------------------------------ */
+
+export type OrderStatus = "SUBMITTED" | "VERIFIED" | "REJECTED" | "INVOICED";
+
+/** How the manufacturer can promise an order line. */
+export type AtpVerdict = "FROM_STOCK" | "BUILD_TO_ORDER" | "PART_STOCK" | "CONSTRAINED";
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  SUBMITTED: "Awaiting verification",
+  VERIFIED: "Verified — slot confirmed",
+  REJECTED: "Rejected",
+  INVOICED: "Invoiced",
+};
+
+export const ATP_LABELS: Record<AtpVerdict, string> = {
+  FROM_STOCK: "Available to transport",
+  PART_STOCK: "Part stock, part build",
+  BUILD_TO_ORDER: "Available to manufacture",
+  CONSTRAINED: "Cannot be promised",
+};
+
+/** The manufacturer's answer to "can you build and move this, and by when?". */
+export interface AtpPlan {
+  verdict: AtpVerdict;
+  /** Units that can ship off finished stock. */
+  fromStock: number;
+  /** Units that have to be built. */
+  toManufacture: number;
+  /** Fixed ISO dates — all derived from the demo clock, never the real one. */
+  manufactureBy?: string;
+  transportBy: string;
+  promisedDelivery: string;
+  /** Plain-English reason shown when the verdict is CONSTRAINED. */
+  constraint?: string;
+}
+
+export interface Order {
+  id: string;
+  dealerCode: string;
+  dealerName: string;
+  region: string;
+  model: string;
+  variant: string;
+  colour: string;
+  qty: number;
+  /** Free-text reason the dealer gave — "Diwali retail block", etc. */
+  reference: string;
+  requestedDelivery: string;
+  placedBy: string;
+  placedAt: string;
+  status: OrderStatus;
+  plan?: AtpPlan;
+  verifiedBy?: string;
+  verifiedAt?: string;
+  rejectionReason?: string;
+  /** VINs raised against this order once the manufacturer invoices it. */
+  invoicedVins: string[];
+}
+
+/** What the plant can ship today and what it can build, per model line. */
+export interface AvailabilityRecord {
+  model: string;
+  variant: string;
+  colours: string[];
+  /** Finished units standing in the yard, ready to be put on a truck. */
+  readyToTransport: number;
+  /** Working days until the next build slot opens. */
+  buildSlotDays: number;
+  /** Units the line can absorb into that slot. */
+  buildSlotCapacity: number;
+  /** Ex-showroom price used when the manufacturer raises the invoice. */
+  price: number;
+  gst: number;
+}
+
+/* ---------------------------------------------------------------------------
+ * Document compliance
+ * ------------------------------------------------------------------------ */
+
+export type DocKind =
+  | "INVOICE"
+  | "ALLOCATION"
+  | "PRICE_CIRCULAR"
+  | "FUNDING_CONFIRMATION"
+  | "EWAY_BILL"
+  | "DELIVERY_CHALLAN"
+  | "POD";
+
+export const DOC_LABELS: Record<DocKind, string> = {
+  INVOICE: "Tax invoice",
+  ALLOCATION: "Allocation advice",
+  PRICE_CIRCULAR: "Price circular",
+  FUNDING_CONFIRMATION: "Funding confirmation",
+  EWAY_BILL: "E-way bill",
+  DELIVERY_CHALLAN: "Delivery challan",
+  POD: "Proof of delivery",
+};
+
+/**
+ * One document on the shared record. `issuedBy` is the party that raised it and
+ * `sharedWith` is everyone it was distributed to — the bank's funding
+ * confirmation, for instance, reaches the manufacturer and the dealer at the
+ * same instant instead of being emailed to one of them.
+ */
+export interface ComplianceDoc {
+  id: string;
+  vin: string;
+  kind: DocKind;
+  reference: string;
+  issuedBy: Role;
+  sharedWith: Role[];
+  issuedAt: string;
+  fields: Record<string, string>;
+}
+
+export type Severity = "CRITICAL" | "WARNING";
+
+export interface ComplianceFinding {
+  id: string;
+  vin: string;
+  ruleId: string;
+  rule: string;
+  severity: Severity;
+  message: string;
+  field?: string;
+  expected?: string;
+  found?: string;
+  /** The documents that disagree — what the reviewer has to open. */
+  docs: DocKind[];
 }

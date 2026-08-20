@@ -24,13 +24,18 @@
   --color-pending-bg: #fdf3e3;
   --color-info: #1f6feb;
 
-  /* Role hues — one per persona, used for ribbons, sidebar active state, KPI accents. */
-  --hue-hq: #0f766e;
-  --hue-plant: #7c3aed;
-  --hue-ro: #4338ca;
-  --hue-dealer: #1f6feb;
-  --hue-bank: #b45309;
-  --hue-lsp: #be185d;
+  /*
+   * Role hues — one per persona, used for ribbons, sidebar active state and KPI
+   * accents. Deliberately desaturated: identity should be recognisable, never
+   * loud. Saturation is reserved for status (green / amber / red), which has to
+   * win the eye on every screen.
+   */
+  --hue-hq: #33415c;
+  --hue-plant: #6a5a72;
+  --hue-ro: #6e6357;
+  --hue-dealer: #33607f;
+  --hue-bank: #8a6a3d;
+  --hue-lsp: #8a5a66;
 
   /* Live role accent — re-pointed by [data-role] on the app shell. */
   --role-hue: var(--color-navy);
@@ -41,27 +46,27 @@
 
 [data-role="hq"] {
   --role-hue: var(--hue-hq);
-  --role-tint: #e4f1ef;
+  --role-tint: #ebedf3;
 }
 [data-role="plant"] {
   --role-hue: var(--hue-plant);
-  --role-tint: #f0e9fe;
+  --role-tint: #f1edf3;
 }
 [data-role="ro"] {
   --role-hue: var(--hue-ro);
-  --role-tint: #e8e8fb;
+  --role-tint: #f2f0ed;
 }
 [data-role="dealer"] {
   --role-hue: var(--hue-dealer);
-  --role-tint: #e6effe;
+  --role-tint: #e9f0f5;
 }
 [data-role="bank"] {
   --role-hue: var(--hue-bank);
-  --role-tint: #faeee0;
+  --role-tint: #f6f0e6;
 }
 [data-role="lsp"] {
   --role-hue: var(--hue-lsp);
-  --role-tint: #fce7f0;
+  --role-tint: #f6edef;
 }
 
 @theme inline {

@@ -8,8 +8,23 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { DEMO_NOW, VEHICLES } from "./mockData";
-import type { Note, Vehicle } from "./types";
+import {
+  DEALERS,
+  DEMO_NOW,
+  DOCUMENTS,
+  ORDERS,
+  VEHICLES,
+  bankForDealer,
+  makeDoc,
+} from "./mockData";
+import { computeAtp, findAvailability } from "./erp";
+import type {
+  AtpPlan,
+  ComplianceDoc,
+  Note,
+  Order,
+  Vehicle,
+} from "./types";
 
 export const LSP_MILESTONES = [
   "Departed",
@@ -35,14 +50,35 @@ const MILESTONE_TEXT: Record<LspMilestone, string> = {
  */
 export const ALT_TRUCK_NO = "PB-08-CX-9021";
 
+/** What the dealer fills in when booking; everything else is derived. */
+export interface OrderDraft {
+  model: string;
+  variant: string;
+  colour: string;
+  qty: number;
+  reference: string;
+  requestedDelivery: string;
+}
+
 interface VehicleStoreContextValue {
   vehicles: Vehicle[];
+  orders: Order[];
+  documents: ComplianceDoc[];
   /** Dealer confirms / bank marks-released — same underlying event, two entry points. */
   receiveFunding: (vin: string) => void;
   issueGatePass: (vin: string) => void;
   updateLspMilestone: (vin: string, milestone: LspMilestone) => void;
   addNote: (vin: string, note: Omit<Note, "at">) => void;
   reassignCarrier: (vin: string) => void;
+  /** ERP — dealer side. */
+  bookOrder: (draft: OrderDraft, placedBy: string) => Order;
+  /** ERP — manufacturer side. */
+  verifyOrder: (orderId: string, plan: AtpPlan, verifiedBy: string) => void;
+  rejectOrder: (orderId: string, reason: string, verifiedBy: string) => void;
+  /** Raises the dummy invoice(s) for a verified order and puts the cars on the pipeline. */
+  raiseInvoiceForOrder: (orderId: string) => string[];
+  /** Bank issues its confirmation; the document lands on the manufacturer's and the dealer's copy at once. */
+  issueFundingConfirmation: (vin: string, input: { chassis: string; amount: number }) => void;
 }
 
 const VehicleStoreContext = createContext<VehicleStoreContextValue | undefined>(undefined);
@@ -55,8 +91,25 @@ function updateVehicle(
   return vehicles.map((v) => (v.vin === vin ? updater(v) : v));
 }
 
+/** VINs minted by the invoice flow live in their own block, after the 14 seeded cars. */
+const MINTED_VIN_PREFIX = "MALBB51RLSM1050";
+
+/** Deterministic VIN minting — sequence continues from the seeded block. */
+function mintVin(index: number): string {
+  return `${MINTED_VIN_PREFIX}${String(index).padStart(2, "0")}`;
+}
+
+/** Deterministic stand-in for an IRP acknowledgement — no randomness anywhere. */
+function mintIrn(vin: string): string {
+  let hash = 0;
+  for (let i = 0; i < vin.length; i += 1) hash = (hash * 31 + vin.charCodeAt(i)) >>> 0;
+  return hash.toString(16).padStart(8, "0").repeat(4).slice(0, 32);
+}
+
 export function VehicleStoreProvider({ children }: { children: ReactNode }) {
   const [vehicles, setVehicles] = useState<Vehicle[]>(VEHICLES);
+  const [orders, setOrders] = useState<Order[]>(ORDERS);
+  const [documents, setDocuments] = useState<ComplianceDoc[]>(DOCUMENTS);
 
   const receiveFunding = useCallback((vin: string) => {
     setVehicles((prev) =>
@@ -132,16 +185,256 @@ export function VehicleStoreProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const bookOrder = useCallback(
+    (draft: OrderDraft, placedBy: string) => {
+      const order: Order = {
+        id: `ORD-KRD-2026-0${400 + orders.length}`,
+        ...DEALERS.KRISHNA,
+        model: draft.model,
+        variant: draft.variant,
+        colour: draft.colour,
+        qty: draft.qty,
+        reference: draft.reference,
+        requestedDelivery: draft.requestedDelivery,
+        placedBy,
+        placedAt: DEMO_NOW,
+        status: "SUBMITTED",
+        invoicedVins: [],
+      };
+      setOrders((prev) => [order, ...prev]);
+      return order;
+    },
+    [orders.length]
+  );
+
+  const verifyOrder = useCallback((orderId: string, plan: AtpPlan, verifiedBy: string) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? { ...o, status: "VERIFIED", plan, verifiedBy, verifiedAt: DEMO_NOW }
+          : o
+      )
+    );
+  }, []);
+
+  const rejectOrder = useCallback((orderId: string, reason: string, verifiedBy: string) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              status: "REJECTED",
+              rejectionReason: reason,
+              plan: o.plan ?? computeAtp(o),
+              verifiedBy,
+              verifiedAt: DEMO_NOW,
+            }
+          : o
+      )
+    );
+  }, []);
+
+  /**
+   * The manufacturer raising the invoice is what puts a car on the shared
+   * record: one Vehicle per unit, plus the three documents (price circular,
+   * allocation, invoice) that every other party immediately reads.
+   */
+  const raiseInvoiceForOrder = useCallback(
+    (orderId: string) => {
+      const order = orders.find((o) => o.id === orderId);
+      if (!order || order.status !== "VERIFIED") return [];
+      const record = findAvailability(order.model, order.variant);
+      if (!record) return [];
+
+      const startIndex =
+        orders.flatMap((o) => o.invoicedVins).filter((vin) => vin.startsWith(MINTED_VIN_PREFIX))
+          .length + 1;
+
+      const newVehicles: Vehicle[] = [];
+      const newDocs: ComplianceDoc[] = [];
+      const minted: string[] = [];
+      const invoiceDate = DEMO_NOW.slice(0, 10);
+
+      for (let i = 0; i < order.qty; i += 1) {
+        const seq = startIndex + i;
+        const vin = mintVin(seq);
+        const chassisShort = vin.slice(-4);
+        const invoiceNo = `HMIL-INV-2026-08-${1200 + seq}`;
+        const allocationRef = `ALC-CHD-2026-09${String(seq).padStart(2, "0")}`;
+        const irn = mintIrn(vin);
+
+        newVehicles.push({
+          vin,
+          chassisShort,
+          model: order.model,
+          variant: order.variant,
+          colour: order.colour,
+          dealerCode: order.dealerCode,
+          dealerName: order.dealerName,
+          region: order.region,
+          invoice: {
+            number: invoiceNo,
+            date: invoiceDate,
+            amount: record.price,
+            gst: record.gst,
+            irn,
+          },
+          allocationRef,
+          priceCircularRef: "PC-2026-08-01",
+          bank: { name: bankForDealer(order.dealerCode), status: "PENDING" },
+          checks: {
+            chassisMatch: "PENDING",
+            variantColourMatch: "CLEAR",
+            priceMatch: "CLEAR",
+            fundingPresent: "PENDING",
+            taxTotalsMatch: "CLEAR",
+          },
+          overall: "CLEAR",
+          stage: "INVOICED",
+          stageTimestamps: { INVOICED: DEMO_NOW },
+          notes: [
+            {
+              author: "Ananya Sharma",
+              role: "hq",
+              text: `Invoiced against ${order.id} — ${order.reference}.`,
+              at: DEMO_NOW,
+            },
+          ],
+        });
+        minted.push(vin);
+
+        newDocs.push(
+          makeDoc(vin, "PRICE_CIRCULAR", "PC-2026-08-01", DEMO_NOW, {
+            reference: "PC-2026-08-01",
+            effectiveFrom: "2026-08-01",
+            model: order.model,
+            variant: order.variant,
+            exShowroom: String(record.price),
+          }),
+          makeDoc(vin, "ALLOCATION", allocationRef, DEMO_NOW, {
+            allocationRef,
+            chassis: chassisShort,
+            model: order.model,
+            variant: order.variant,
+            colour: order.colour,
+            dealerCode: order.dealerCode,
+          }),
+          makeDoc(vin, "INVOICE", invoiceNo, DEMO_NOW, {
+            invoiceNo,
+            invoiceDate,
+            chassis: chassisShort,
+            model: order.model,
+            variant: order.variant,
+            colour: order.colour,
+            dealerCode: order.dealerCode,
+            amount: String(record.price),
+            gst: String(record.gst),
+            total: String(record.price + record.gst),
+            priceCircularRef: "PC-2026-08-01",
+            irn,
+          })
+        );
+      }
+
+      setVehicles((prev) => [...prev, ...newVehicles]);
+      setDocuments((prev) => [...prev, ...newDocs]);
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId ? { ...o, status: "INVOICED", invoicedVins: minted } : o
+        )
+      );
+
+      return minted;
+    },
+    [orders]
+  );
+
+  /**
+   * The bank issues once. The confirmation is not emailed anywhere — it lands on
+   * the shared record, where the manufacturer, the plant, the RO and the dealer
+   * all read the same copy, and the compliance rules re-run against it.
+   */
+  const issueFundingConfirmation = useCallback(
+    (vin: string, input: { chassis: string; amount: number }) => {
+      const vehicle = vehicles.find((v) => v.vin === vin);
+      if (!vehicle) return;
+      const matches = input.chassis === vehicle.chassisShort;
+
+      setVehicles((prev) =>
+        updateVehicle(prev, vin, (v) => {
+          const checks = {
+            ...v.checks,
+            chassisMatch: matches ? ("CLEAR" as const) : ("MISMATCH" as const),
+            fundingPresent: "CLEAR" as const,
+          };
+          const overall = Object.values(checks).every((c) => c === "CLEAR")
+            ? ("CLEAR" as const)
+            : ("STUCK" as const);
+          return {
+            ...v,
+            bank: {
+              ...v.bank,
+              status: matches ? "RECEIVED" : "MISMATCH",
+              chassisOnConfirmation: input.chassis,
+              amount: input.amount,
+              receivedAt: DEMO_NOW,
+            },
+            checks,
+            overall,
+            stuckReason: matches
+              ? undefined
+              : `Bank funding confirmation cites chassis ${input.chassis}, invoice says ${v.chassisShort} — gate pass blocked until chassis numbers match.`,
+            stage: "FUNDING_RECEIVED",
+            stageTimestamps: { ...v.stageTimestamps, FUNDING_RECEIVED: DEMO_NOW },
+          };
+        })
+      );
+
+      setDocuments((prev) => [
+        ...prev.filter((d) => !(d.vin === vin && d.kind === "FUNDING_CONFIRMATION")),
+        makeDoc(vin, "FUNDING_CONFIRMATION", `FC-${input.chassis}-2026`, DEMO_NOW, {
+          bank: vehicle.bank.name,
+          chassis: input.chassis,
+          amount: String(input.amount),
+          receivedAt: DEMO_NOW,
+          dealerCode: vehicle.dealerCode,
+        }),
+      ]);
+    },
+    [vehicles]
+  );
+
   const value = useMemo<VehicleStoreContextValue>(
     () => ({
       vehicles,
+      orders,
+      documents,
       receiveFunding,
       issueGatePass,
       updateLspMilestone,
       addNote,
       reassignCarrier,
+      bookOrder,
+      verifyOrder,
+      rejectOrder,
+      raiseInvoiceForOrder,
+      issueFundingConfirmation,
     }),
-    [vehicles, receiveFunding, issueGatePass, updateLspMilestone, addNote, reassignCarrier]
+    [
+      vehicles,
+      orders,
+      documents,
+      receiveFunding,
+      issueGatePass,
+      updateLspMilestone,
+      addNote,
+      reassignCarrier,
+      bookOrder,
+      verifyOrder,
+      rejectOrder,
+      raiseInvoiceForOrder,
+      issueFundingConfirmation,
+    ]
   );
 
   return (

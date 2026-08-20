@@ -6,12 +6,19 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useVehicleStore } from "@/lib/store";
-import { findVehicleForRole, getVehicleTone } from "@/lib/selectors";
+import {
+  findVehicleForRole,
+  getAlertsForVehicle,
+  getDocumentsForVehicle,
+  getVehicleTone,
+} from "@/lib/selectors";
 import DashboardShell from "@/components/DashboardShell";
 import StatusChip from "@/components/StatusChip";
 import CheckRail from "@/components/CheckRail";
 import DocCompare from "@/components/DocCompare";
 import JourneyRail from "@/components/JourneyRail";
+import DocumentList from "@/components/DocumentList";
+import ComplianceAlerts from "@/components/ComplianceAlerts";
 import NotesThread from "@/components/NotesThread";
 import VehicleActions from "@/components/VehicleActions";
 
@@ -21,7 +28,7 @@ const ROLES_WITH_NOTES = new Set(["hq", "plant", "ro", "dealer"]);
 export default function VehiclePage() {
   const { vin } = useParams<{ vin: string }>();
   const { role } = useAuth();
-  const { vehicles } = useVehicleStore();
+  const { vehicles, documents } = useVehicleStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -54,6 +61,8 @@ export default function VehiclePage() {
     );
   }
 
+  const docs = getDocumentsForVehicle(documents, vehicles, role, vehicle.vin);
+  const findings = getAlertsForVehicle(vehicles, documents, role, vehicle.vin);
   const tone = getVehicleTone(vehicle);
   const chipLabel = tone === "clear" ? "CLEAR" : tone === "pending" ? "SUBSTITUTION" : "STUCK";
   const showDocCompare = ROLES_WITH_DOC_COMPARE.has(role);
@@ -125,6 +134,23 @@ export default function VehiclePage() {
           <DocCompare vehicle={vehicle} />
         </section>
       )}
+
+      <section aria-labelledby="docs-heading">
+        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+          <h3 id="docs-heading" className="text-sm font-semibold text-ink">
+            Documents on the shared record
+          </h3>
+          <span className="text-xs text-ink-muted">
+            {docs.length} document{docs.length === 1 ? "" : "s"} visible to you
+          </span>
+        </div>
+        {findings.length > 0 && (
+          <div className="mb-3">
+            <ComplianceAlerts findings={findings} />
+          </div>
+        )}
+        <DocumentList docs={docs} findings={findings} />
+      </section>
 
       {vehicle.lsp && (
         <section aria-labelledby="lsp-heading">

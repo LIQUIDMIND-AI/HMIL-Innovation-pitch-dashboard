@@ -1,113 +1,167 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import "leaflet/dist/leaflet.css";
 import type { Trip } from "@/lib/types";
 
-/**
- * India, drawn as a coarse polygon of real coastline/border points projected
- * equirectangularly (x = lon, y = lat) into the map viewBox — the same
- * projection the city anchors and route paths use, so everything lines up.
- * No tiles, no network.
- */
-const INDIA_OUTLINE =
-  "M119,63 L161,81 L188,98 L196,123 L217,154 L259,176 L315,187 L329,201 L339,210 " +
-  "L371,193 L406,192 L427,166 L447,183 L434,197 L416,206 L406,228 L391,243 L379,270 " +
-  "L357,273 L329,274 L301,277 L273,301 L235,340 L207,357 L206,389 L200,434 L178,453 " +
-  "L168,465 L154,445 L143,411 L130,383 L112,354 L104,311 L99,277 L94,264 L57,266 " +
-  "L48,246 L63,236 L71,214 L98,187 L112,165 L127,137 L140,123 L119,95 Z";
+type LatLng = [number, number];
+
+/** Cumulative straight-line lengths along the corridor, for interpolation. */
+function cumulative(route: LatLng[]): number[] {
+  const out = [0];
+  for (let i = 1; i < route.length; i += 1) {
+    const [aLat, aLng] = route[i - 1];
+    const [bLat, bLng] = route[i];
+    out.push(out[i - 1] + Math.hypot(bLat - aLat, bLng - aLng));
+  }
+  return out;
+}
+
+/** The point a given fraction (0–1) along the corridor. */
+function pointAt(route: LatLng[], cum: number[], fraction: number): LatLng {
+  const target = cum[cum.length - 1] * Math.min(Math.max(fraction, 0), 1);
+  for (let i = 1; i < cum.length; i += 1) {
+    if (cum[i] >= target) {
+      const span = cum[i] - cum[i - 1] || 1;
+      const t = (target - cum[i - 1]) / span;
+      const [aLat, aLng] = route[i - 1];
+      const [bLat, bLng] = route[i];
+      return [aLat + (bLat - aLat) * t, aLng + (bLng - aLng) * t];
+    }
+  }
+  return route[route.length - 1];
+}
+
+function sliceTo(route: LatLng[], cum: number[], fraction: number): LatLng[] {
+  const head = pointAt(route, cum, fraction);
+  const total = cum[cum.length - 1];
+  const kept = route.filter((_, i) => cum[i] <= total * fraction);
+  return [...kept, head];
+}
+
+const TRUCK_GLYPH = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>`;
 
 /**
- * The animated route map (build plan v3 §1.3). The truck marker runs the trip's
- * own SVG path on a slow loop; milestone dots light up as they are passed.
- * Everything is inline — zero external tiles, zero network.
+ * The route map, drawn on OpenStreetMap tiles via Leaflet. The corridor is the
+ * seeded NH-44 waypoint chain; the truck marker crawls it on a slow loop and
+ * milestone pins light up as they are passed. Tiles come from the public OSM
+ * servers — the one place this build reaches the network at runtime.
  */
 export default function TrackingMap({ trip }: { trip: Trip }) {
-  const delayed = trip.status === "DELAYED";
-  const strokeColor = delayed ? "var(--color-pending)" : "var(--role-hue)";
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let disposed = false;
+    let cleanup = () => {};
+
+    (async () => {
+      const L = (await import("leaflet")).default;
+      if (disposed || !containerRef.current) return;
+
+      const styles = getComputedStyle(container);
+      const roleHue = styles.getPropertyValue("--role-hue").trim() || "#33607f";
+      const delayed = trip.status === "DELAYED";
+      const live = delayed ? "#d97706" : roleHue;
+
+      const route = trip.route as LatLng[];
+      const cum = cumulative(route);
+
+      const map = L.map(container, {
+        zoomControl: true,
+        scrollWheelZoom: false,
+        attributionControl: true,
+      });
+
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(map);
+
+      // Whole corridor, then the travelled portion drawn over it.
+      L.polyline(route, {
+        color: "#94a3b8",
+        weight: 3,
+        opacity: 0.6,
+        dashArray: "6 8",
+      }).addTo(map);
+
+      const travelled = L.polyline(sliceTo(route, cum, trip.progress), {
+        color: live,
+        weight: 5,
+        opacity: 0.9,
+      }).addTo(map);
+
+      for (const milestone of trip.milestones) {
+        L.circleMarker([milestone.lat, milestone.lng], {
+          radius: 6,
+          color: "#ffffff",
+          weight: 2,
+          fillColor: milestone.reached ? live : "#cbd5e1",
+          fillOpacity: 1,
+        })
+          .addTo(map)
+          .bindTooltip(
+            `${milestone.label}${milestone.at ? ` · ${milestone.at.slice(8, 10)}/${milestone.at.slice(5, 7)}` : " · pending"}`,
+            { direction: "top" }
+          );
+      }
+
+      const truck = L.marker(pointAt(route, cum, trip.progress), {
+        icon: L.divIcon({
+          className: "",
+          html: `<span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:9999px;background:${live};box-shadow:0 0 0 3px #fff, 0 1px 3px rgb(11 36 71 / 0.35)">${TRUCK_GLYPH}</span>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+        }),
+        interactive: false,
+      }).addTo(map);
+
+      truck.bindTooltip(`${trip.truckNo} · ${trip.origin} → ${trip.destination}`);
+
+      map.fitBounds(L.latLngBounds(route), { padding: [18, 18], maxZoom: 7 });
+
+      // A slow crawl over the travelled leg — paused entirely for reduced motion.
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let timer: ReturnType<typeof setInterval> | undefined;
+      if (!reduced) {
+        const steps = 120;
+        let step = 0;
+        timer = setInterval(() => {
+          step = (step + 1) % steps;
+          const eased = (step / steps) * trip.progress;
+          truck.setLatLng(pointAt(route, cum, eased));
+          travelled.setLatLngs(sliceTo(route, cum, eased));
+        }, 220);
+      }
+
+      cleanup = () => {
+        if (timer) clearInterval(timer);
+        map.remove();
+      };
+    })();
+
+    return () => {
+      disposed = true;
+      cleanup();
+    };
+  }, [trip]);
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-4 shadow-card">
-      <svg
-        viewBox="30 45 440 440"
-        role="img"
+    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+      <div
+        ref={containerRef}
+        role="application"
         aria-label={`Route map: ${trip.origin} to ${trip.destination}, ${
-          delayed ? `${trip.daysLate} days late` : "on schedule"
+          trip.status === "DELAYED" ? `${trip.daysLate} days late` : "on schedule"
         }`}
-        className="mx-auto h-auto w-full max-w-[520px]"
-      >
-        <path d={INDIA_OUTLINE} fill="var(--color-canvas)" stroke="var(--color-border)" strokeWidth="2" />
-
-        {/* Full route, then the travelled portion drawn over it. */}
-        <path
-          d={trip.path}
-          fill="none"
-          stroke="var(--color-border)"
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeDasharray="6 8"
-        />
-        <path
-          d={trip.path}
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth="4"
-          strokeLinecap="round"
-          pathLength={1}
-          strokeDasharray="1"
-          strokeDashoffset={1 - trip.progress}
-        />
-
-        {trip.milestones.map((m) => (
-          <g key={m.label}>
-            <circle
-              cx={m.cx}
-              cy={m.cy}
-              r="6"
-              fill={m.reached ? strokeColor : "var(--color-surface)"}
-              stroke={m.reached ? "var(--color-surface)" : "var(--color-border)"}
-              strokeWidth="2.5"
-            />
-            <text
-              x={m.cx + 12}
-              y={m.cy + 4}
-              className="font-mono-vin"
-              fill="var(--color-ink-muted)"
-              fontSize="11"
-            >
-              {m.label.split(" — ").pop()?.split(",")[0]}
-            </text>
-          </g>
-        ))}
-
-        <g
-          className="animate-truck"
-          style={
-            {
-              "--trip-path": `path("${trip.path}")`,
-              "--trip-end": `${Math.round(trip.progress * 100)}%`,
-              "--trip-duration": delayed ? "28s" : "24s",
-            } as React.CSSProperties
-          }
-        >
-          <circle r="11" fill={strokeColor} stroke="var(--color-surface)" strokeWidth="3" />
-          <g
-            transform="translate(-6,-6) scale(0.5)"
-            fill="none"
-            stroke="var(--color-surface)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" />
-            <path d="M15 18H9" />
-            <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" />
-            <circle cx="17" cy="18" r="2" />
-            <circle cx="7" cy="18" r="2" />
-          </g>
-        </g>
-      </svg>
-
-      <p className="mt-3 text-center text-xs text-ink-muted">
-        Live signals via ULIP / transporter feed (simulated in demo)
+        className="h-[300px] w-full sm:h-[420px]"
+      />
+      <p className="border-t border-border px-4 py-2.5 text-center text-xs text-ink-muted">
+        Live signals via ULIP / transporter feed (simulated in demo) · base map ©
+        OpenStreetMap contributors
       </p>
     </div>
   );

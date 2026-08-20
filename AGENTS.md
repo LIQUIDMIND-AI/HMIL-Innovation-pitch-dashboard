@@ -32,9 +32,15 @@ tool call, and flag it again if you see it re-appear anywhere.**
   must go through `getVehiclesForRole()` in `lib/selectors.ts`. Pages and components
   never import `lib/mockData.ts` directly — that's the one rule most likely to be
   violated by a careless edit, and it silently breaks the RBAC story of the demo.
-- **No real integrations.** Bank is a status field, not a connected party. Never build
-  anything that "sends documents to a bank."
-- **No invoice creation.** DhanFlow reads HMIL's invoice; it never writes one.
+- **No real integrations, with one exception.** The tracking screens draw
+  OpenStreetMap tiles through Leaflet — the only runtime network call in the build,
+  keyless and read-only. Everything else still renders from static mock data. The
+  bank is still a status source, not a connected party: it raises its funding
+  confirmation *onto the shared record*, and DhanFlow never sends anything to it.
+- **Invoices are raised in-app, but only from a verified order.** The manufacturer
+  turns a verified dealer order into dummy invoice(s) plus their documents in client
+  state (`raiseInvoiceForOrder`). Nothing is persisted and no real invoice format is
+  claimed.
 - **Deterministic demo.** No `Math.random()` / `Date.now()` / `new Date()` at runtime
   for anything that affects rendered output — the presenter rehearses against fixed
   screens. All "seeded" values are hardcoded in `lib/mockData.ts`.
@@ -56,15 +62,23 @@ app/
   not-found.tsx                  — unknown URL → back to the session's home
   hq/ plant/ ro/ dealer/ bank/ lsp/page.tsx   — one dashboard per role (+ sub-pages)
   dealer/tracking, lsp/tracking  — live tracking screen (map + timeline)
+  hq/orders, dealer/orders       — ERP: dealer books, manufacturer verifies (ATP) and invoices
+  hq/compliance, dealer/compliance — document alerts + the end-of-run report
+  bank/documents                 — the bank raises its confirmation onto the shared record
   vehicle/[vin]/page.tsx         — shared VIN detail, content role-scoped
 components/
   DashboardShell, PersonaBar, Sidebar, KpiStrip, PipelineBoard, VehicleCard,
   JourneyRail, ExceptionList, CheckRail, DocCompare, NotesThread, RoleGate,
-  StatusChip, Chatbot, ChatSnippet, TrackingBoard, TrackingMap, HqCharts
+  StatusChip, Chatbot, ChatSnippet, TrackingBoard, TrackingMap (Leaflet/OSM),
+  OrderCard, OrderBookingForm, AtpPanel, DocumentList, ComplianceAlerts,
+  ComplianceReportView, HqCharts
 lib/
   types.ts       — Vehicle/Stage/CheckStatus/Role/Trip types
   mockData.ts    — the 14 hardcoded vehicles + 2 trips (single source of truth for data)
-  selectors.ts   — getVehiclesForRole() and all role-scoping logic
+  selectors.ts   — getVehiclesForRole() and all role-scoping logic, including
+                    orders, documents and compliance scoping
+  erp.ts         — available-to-promise: stock vs build slot vs promised date
+  compliance.ts  — the document rulebook (R01–R10) and the report builder
   chatContent.ts — the canned per-persona chatbot scripts
   roleTheme.ts   — role hues mirrored from CSS, for the per-persona favicon
   auth.tsx       — AuthContext (role, login/logout, sessionStorage)
@@ -78,6 +92,11 @@ lib/
   auth/login/RoleGate → shared layout → board/card/exceptions → vehicle detail →
   interactions → charts/polish). Commit after each stage — small, reviewable diffs,
   not one mega-commit.
+- Role scoping covers **orders and documents too**: `getOrdersForRole`,
+  `getDocumentsForRole` and `getAlertsForRole` are the choke points. A document is
+  visible only when the role raised it or was shared on it *and* the car is already
+  in that role's vehicle scope — a `sharedWith` entry can never widen a data window.
+  Rules that assert a missing document only fire for parties entitled to hold it.
 - Role scoping bugs are the most damaging kind of bug in this codebase: verify with
   the checklist in `plan.md` §11 (e.g. Dealer sees exactly its own cars, `/hq` while
   logged in as `dealer` redirects away) before considering a stage done.
@@ -85,6 +104,8 @@ lib/
   a `#F6F8FB` canvas, ink navy `#0B2447` reserved for the frame (persona bar, login,
   chatbot header). Green `#16A34A` = CLEAR, red `#DC2626` = STUCK, amber `#D97706` =
   pending/substitution. No gradients, no glassmorphism, no dark mode.
+- Role hues are deliberately desaturated — identity should be recognisable, never
+  loud. Saturation belongs to status (green / amber / red), which has to win the eye.
 - Each persona owns a **role hue**, set as `--role-hue` / `--role-tint` by the
   `data-role` attribute on the app shell and consumed through the `role` /
   `role-tint` Tailwind colours. Never hardcode a persona colour in a component.

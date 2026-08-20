@@ -6,12 +6,12 @@ import type { Role } from "./types";
  * need a literal colour in JS (the per-persona favicon).
  */
 export const ROLE_HUES: Record<Role, string> = {
-  hq: "#0f766e",
-  plant: "#7c3aed",
-  ro: "#4338ca",
-  dealer: "#1f6feb",
-  bank: "#b45309",
-  lsp: "#be185d",
+  hq: "#33415c",
+  plant: "#6a5a72",
+  ro: "#6e6357",
+  dealer: "#33607f",
+  bank: "#8a6a3d",
+  lsp: "#8a5a66",
 };
 
 /** A tiny role-tinted "D" mark, inlined as a data URI — no extra network request. */
