@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { useAuth } from "@/lib/auth";
+import { useAuth, useHydrated } from "@/lib/auth";
 import { useVehicleStore } from "@/lib/store";
 import {
   findVehicleForRole,
@@ -28,12 +28,13 @@ const ROLES_WITH_NOTES = new Set(["hq", "plant", "ro", "dealer"]);
 export default function VehiclePage() {
   const { vin } = useParams<{ vin: string }>();
   const { role } = useAuth();
+  const hydrated = useHydrated();
   const { vehicles, documents } = useVehicleStore();
   const router = useRouter();
 
   useEffect(() => {
-    if (!role) router.replace("/login");
-  }, [role, router]);
+    if (hydrated && !role) router.replace("/login");
+  }, [hydrated, role, router]);
 
   if (!role) return null;
 

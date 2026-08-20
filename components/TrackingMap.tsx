@@ -150,7 +150,7 @@ export default function TrackingMap({ trip }: { trip: Trip }) {
   }, [trip]);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+    <div className="relative isolate z-0 overflow-hidden rounded-xl border border-border bg-surface shadow-card">
       <div
         ref={containerRef}
         role="application"

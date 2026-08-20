@@ -283,3 +283,43 @@ body {
     scroll-behavior: auto;
   }
 }
+
+/*
+ * Leaflet ships z-indexes in the 400–1000 range, which would ride over the
+ * sticky persona bar (z-30) and the chatbot slide-over (z-50) as soon as the
+ * page scrolls. Cage the map in its own stacking context and renumber its panes
+ * inside it — DOM order is preserved, so tiles still sit under the route, the
+ * route under the markers, and the controls on top of all of them.
+ */
+.leaflet-container {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+
+.leaflet-pane {
+  z-index: 4;
+}
+.leaflet-tile-pane {
+  z-index: 2;
+}
+.leaflet-overlay-pane {
+  z-index: 4;
+}
+.leaflet-shadow-pane {
+  z-index: 5;
+}
+.leaflet-marker-pane {
+  z-index: 6;
+}
+.leaflet-tooltip-pane {
+  z-index: 7;
+}
+.leaflet-popup-pane {
+  z-index: 8;
+}
+.leaflet-control,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 9;
+}

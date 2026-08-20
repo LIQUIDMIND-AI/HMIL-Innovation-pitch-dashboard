@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth";
+import { useAuth, useHydrated } from "@/lib/auth";
 import type { Role } from "@/lib/types";
 
 /**
@@ -19,9 +19,12 @@ export default function RoleGate({
   children: React.ReactNode;
 }) {
   const { role: sessionRole } = useAuth();
+  const hydrated = useHydrated();
   const router = useRouter();
 
   useEffect(() => {
+    // Wait for the real client value: the server snapshot is always null.
+    if (!hydrated) return;
     if (!sessionRole) {
       router.replace("/login");
       return;
@@ -29,7 +32,7 @@ export default function RoleGate({
     if (sessionRole !== role) {
       router.replace(`/${sessionRole}`);
     }
-  }, [sessionRole, role, router]);
+  }, [hydrated, sessionRole, role, router]);
 
   // Nothing is rendered while the redirect resolves — data is local, so there
   // is never a loading state to show, and a flash of placeholder text would

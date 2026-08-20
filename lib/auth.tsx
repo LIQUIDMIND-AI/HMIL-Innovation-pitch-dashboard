@@ -193,3 +193,21 @@ export function useAuth(): AuthContextValue {
   if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
   return ctx;
 }
+
+/**
+ * False on the hydration render, true from the first client effect onward.
+ *
+ * The session role is read from sessionStorage, so the server snapshot is
+ * always `null`. Route guards must not act on that first `null` — doing so
+ * bounces a hard refresh of any deep URL (say `/dealer/tracking`) out to the
+ * login page and back to the role home. Gate the redirect on this instead.
+ */
+const noopSubscribe = () => () => {};
+
+export function useHydrated(): boolean {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false
+  );
+}
