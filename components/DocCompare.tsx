@@ -50,9 +50,7 @@ function ChassisValue({
           <span
             key={i}
             className={
-              differs
-                ? "rounded-[4px] bg-stuck/10 text-stuck ring-1 ring-stuck/40"
-                : "text-ink"
+              differs ? "rounded-[4px] bg-stuck/10 text-stuck ring-1 ring-stuck/40" : "text-ink"
             }
           >
             {ch}
@@ -63,15 +61,20 @@ function ChassisValue({
   );
 }
 
+/**
+ * The invoice beside the dispatch papers raised against it. Every field the
+ * rulebook cross-checks lives on this one screen, so the mismatch is visible
+ * rather than described.
+ */
 export default function DocCompare({ vehicle }: { vehicle: Vehicle }) {
   const chassisMismatch = vehicle.checks.chassisMatch === "MISMATCH";
-  const hasConfirmation = vehicle.bank.status !== "PENDING";
+  const raised = vehicle.dispatch.status !== "NOT_RAISED";
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-          Invoice
+          Tax invoice
         </h3>
         <dl className="mt-3 flex flex-col gap-2.5">
           <Row label="Invoice No." mono>{vehicle.invoice.number}</Row>
@@ -82,14 +85,17 @@ export default function DocCompare({ vehicle }: { vehicle: Vehicle }) {
           <Row label="Chassis">
             <ChassisValue
               value={vehicle.chassisShort}
-              other={vehicle.bank.chassisOnConfirmation}
+              other={vehicle.dispatch.chassisOnDocs}
               highlight={chassisMismatch}
             />
           </Row>
+          <Row label="Dealer" mono>{vehicle.dealerCode}</Row>
           <Row label="Amount" mono>{formatINR(vehicle.invoice.amount)}</Row>
           <Row label="GST" mono>{formatINR(vehicle.invoice.gst)}</Row>
           <Row label="IRN">
-            <span className="font-mono-vin text-xs text-ink-muted">{vehicle.invoice.irn}</span>
+            <span className="font-mono-vin text-xs text-ink-muted">
+              {vehicle.invoice.irn || "—"}
+            </span>
           </Row>
         </dl>
       </div>
@@ -101,28 +107,29 @@ export default function DocCompare({ vehicle }: { vehicle: Vehicle }) {
       >
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-            Funding Confirmation
+            Dispatch papers
           </h3>
           <StatusChip
             tone={
-              vehicle.bank.status === "RECEIVED"
+              vehicle.dispatch.status === "RAISED"
                 ? "clear"
-                : vehicle.bank.status === "MISMATCH"
+                : vehicle.dispatch.status === "MISMATCH"
                   ? "stuck"
                   : "pending"
             }
           >
-            {vehicle.bank.status}
+            {vehicle.dispatch.status === "NOT_RAISED" ? "NOT RAISED" : vehicle.dispatch.status}
           </StatusChip>
         </div>
 
-        {hasConfirmation ? (
+        {raised ? (
           <dl className="mt-3 flex flex-col gap-2.5">
-            <Row label="Bank">{vehicle.bank.name}</Row>
-            <Row label="Chassis on Confirmation">
-              {vehicle.bank.chassisOnConfirmation ? (
+            <Row label="E-way bill" mono>{vehicle.dispatch.ewbNo ?? "—"}</Row>
+            <Row label="Delivery challan" mono>{vehicle.dispatch.challanNo ?? "—"}</Row>
+            <Row label="Chassis on papers">
+              {vehicle.dispatch.chassisOnDocs ? (
                 <ChassisValue
-                  value={vehicle.bank.chassisOnConfirmation}
+                  value={vehicle.dispatch.chassisOnDocs}
                   other={vehicle.chassisShort}
                   highlight={chassisMismatch}
                 />
@@ -130,16 +137,16 @@ export default function DocCompare({ vehicle }: { vehicle: Vehicle }) {
                 "—"
               )}
             </Row>
-            <Row label="Amount" mono>
-              {vehicle.bank.amount !== undefined ? formatINR(vehicle.bank.amount) : "—"}
+            <Row label="Valid till" mono>{vehicle.dispatch.validTill ?? "—"}</Row>
+            <Row label="Raised" mono>
+              {vehicle.dispatch.raisedAt ? formatDateTime(vehicle.dispatch.raisedAt) : "—"}
             </Row>
-            <Row label="Received" mono>
-              {vehicle.bank.receivedAt ? formatDateTime(vehicle.bank.receivedAt) : "—"}
-            </Row>
+            <Row label="Carrier" mono>{vehicle.lsp?.truckNo ?? "not assigned"}</Row>
           </dl>
         ) : (
           <p className="mt-4 text-sm text-ink-muted">
-            Awaiting funding confirmation from {vehicle.bank.name}.
+            No e-way bill or delivery challan has been raised yet — the plant raises both once
+            every cross-document check is clear.
           </p>
         )}
       </div>

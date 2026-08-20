@@ -22,26 +22,18 @@ export const DEALERS = {
     dealerCode: "KRD-CHD-014",
     dealerName: "Krishna Hyundai",
     region: REGION_NORTH,
-    bankName: "HDFC Bank — Dealer Finance Desk",
   },
   METRO: {
     dealerCode: "MHL-LDH-027",
     dealerName: "Metro Hyundai",
     region: REGION_NORTH,
-    bankName: "ICICI Bank — Dealer Finance Desk",
   },
 } as const;
 
 const LSP_SPEEDLINE = "Speedline Logistics";
 
-/** Which dealer-finance desk funds a given dealer — used when new invoices are raised. */
-export function bankForDealer(dealerCode: string): string {
-  return dealerCode === DEALERS.METRO.dealerCode
-    ? DEALERS.METRO.bankName
-    : DEALERS.KRISHNA.bankName;
-}
-
 export const VEHICLES: Vehicle[] = [
+
   // ---- 5 fully CLEAR, various stages (happy path) ----
   {
     vin: "MALBB51RLSM104001",
@@ -59,27 +51,28 @@ export const VEHICLES: Vehicle[] = [
     },
     allocationRef: "ALC-CHD-2026-0801",
     priceCircularRef: "PC-2026-08-01",
-    bank: {
-      name: DEALERS.KRISHNA.bankName,
-      status: "RECEIVED",
-      chassisOnConfirmation: "4001",
-      amount: 1570000,
-      receivedAt: "2026-08-03T11:20:00+05:30",
+    dispatch: {
+      status: "RAISED",
+      ewbNo: "EWB-4001-8841",
+      challanNo: "DC-4001-2026",
+      chassisOnDocs: "4001",
+      validTill: "2026-08-25",
+      raisedAt: "2026-08-04T06:00:00+05:30",
     },
     checks: {
       chassisMatch: "CLEAR",
       variantColourMatch: "CLEAR",
       priceMatch: "CLEAR",
-      fundingPresent: "CLEAR",
       taxTotalsMatch: "CLEAR",
+      dispatchDocsPresent: "CLEAR",
     },
     overall: "CLEAR",
     stage: "DELIVERED",
     stageTimestamps: {
       INVOICED: "2026-08-02T09:15:00+05:30",
-      ALLOCATION_MATCHED: "2026-08-02T09:20:00+05:30",
-      FUNDING_PENDING: "2026-08-02T09:25:00+05:30",
-      FUNDING_RECEIVED: "2026-08-03T11:20:00+05:30",
+      ALLOCATION_MATCHED: "2026-08-02T09:25:00+05:30",
+      DOCS_VERIFIED: "2026-08-03T11:20:00+05:30",
+      DISPATCH_READY: "2026-08-04T06:00:00+05:30",
       GATE_OUT: "2026-08-04T08:00:00+05:30",
       IN_TRANSIT: "2026-08-04T09:00:00+05:30",
       DELIVERED: "2026-08-08T16:40:00+05:30",
@@ -89,7 +82,8 @@ export const VEHICLES: Vehicle[] = [
       truckNo: "PB-11-AT-4471",
       route: "Sriperumbudur (TN) → Chandigarh (PB)",
       etaDays: 4,
-      lastMilestone: "Delivered to dealer",
+      lastMilestone:
+        "Delivered to dealer",
     },
     notes: [],
   },
@@ -109,27 +103,28 @@ export const VEHICLES: Vehicle[] = [
     },
     allocationRef: "ALC-LDH-2026-0512",
     priceCircularRef: "PC-2026-08-01",
-    bank: {
-      name: DEALERS.METRO.bankName,
-      status: "RECEIVED",
-      chassisOnConfirmation: "4002",
-      amount: 725000,
-      receivedAt: "2026-08-02T10:05:00+05:30",
+    dispatch: {
+      status: "RAISED",
+      ewbNo: "EWB-4002-8841",
+      challanNo: "DC-4002-2026",
+      chassisOnDocs: "4002",
+      validTill: "2026-08-25",
+      raisedAt: "2026-08-03T06:30:00+05:30",
     },
     checks: {
       chassisMatch: "CLEAR",
       variantColourMatch: "CLEAR",
       priceMatch: "CLEAR",
-      fundingPresent: "CLEAR",
       taxTotalsMatch: "CLEAR",
+      dispatchDocsPresent: "CLEAR",
     },
     overall: "CLEAR",
     stage: "DELIVERED",
     stageTimestamps: {
       INVOICED: "2026-08-01T09:00:00+05:30",
       ALLOCATION_MATCHED: "2026-08-01T09:10:00+05:30",
-      FUNDING_PENDING: "2026-08-01T09:15:00+05:30",
-      FUNDING_RECEIVED: "2026-08-02T10:05:00+05:30",
+      DOCS_VERIFIED: "2026-08-02T10:05:00+05:30",
+      DISPATCH_READY: "2026-08-03T06:30:00+05:30",
       GATE_OUT: "2026-08-03T08:30:00+05:30",
       IN_TRANSIT: "2026-08-03T09:30:00+05:30",
       DELIVERED: "2026-08-07T14:10:00+05:30",
@@ -139,7 +134,8 @@ export const VEHICLES: Vehicle[] = [
       truckNo: "PB-65-BT-2210",
       route: "Sriperumbudur (TN) → Ludhiana (PB)",
       etaDays: 4,
-      lastMilestone: "Delivered to dealer",
+      lastMilestone:
+        "Delivered to dealer",
     },
     notes: [],
   },
@@ -152,43 +148,45 @@ export const VEHICLES: Vehicle[] = [
     ...DEALERS.KRISHNA,
     invoice: {
       number: "HMIL-INV-2026-08-1063",
-      date: "2026-08-12",
+      date: "2026-08-15",
       amount: 980000,
       gst: 275000,
       irn: "2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e",
     },
     allocationRef: "ALC-CHD-2026-0842",
     priceCircularRef: "PC-2026-08-01",
-    bank: {
-      name: DEALERS.KRISHNA.bankName,
-      status: "RECEIVED",
-      chassisOnConfirmation: "4003",
-      amount: 980000,
-      receivedAt: "2026-08-13T09:40:00+05:30",
+    dispatch: {
+      status: "RAISED",
+      ewbNo: "EWB-4003-8841",
+      challanNo: "DC-4003-2026",
+      chassisOnDocs: "4003",
+      validTill: "2026-08-25",
+      raisedAt: "2026-08-17T06:10:00+05:30",
     },
     checks: {
       chassisMatch: "CLEAR",
       variantColourMatch: "CLEAR",
       priceMatch: "CLEAR",
-      fundingPresent: "CLEAR",
       taxTotalsMatch: "CLEAR",
+      dispatchDocsPresent: "CLEAR",
     },
     overall: "CLEAR",
     stage: "IN_TRANSIT",
     stageTimestamps: {
-      INVOICED: "2026-08-12T09:00:00+05:30",
-      ALLOCATION_MATCHED: "2026-08-12T09:10:00+05:30",
-      FUNDING_PENDING: "2026-08-12T09:15:00+05:30",
-      FUNDING_RECEIVED: "2026-08-13T09:40:00+05:30",
-      GATE_OUT: "2026-08-14T08:15:00+05:30",
-      IN_TRANSIT: "2026-08-14T09:15:00+05:30",
+      INVOICED: "2026-08-15T09:00:00+05:30",
+      ALLOCATION_MATCHED: "2026-08-15T09:10:00+05:30",
+      DOCS_VERIFIED: "2026-08-16T12:00:00+05:30",
+      DISPATCH_READY: "2026-08-17T06:10:00+05:30",
+      GATE_OUT: "2026-08-17T08:10:00+05:30",
+      IN_TRANSIT: "2026-08-17T09:10:00+05:30",
     },
     lsp: {
       name: LSP_SPEEDLINE,
       truckNo: "PB-11-AT-5590",
       route: "Sriperumbudur (TN) → Chandigarh (PB)",
       etaDays: 4,
-      lastMilestone: "In transit — crossed Nagpur checkpoint, on schedule",
+      lastMilestone:
+        "In transit — crossed Nagpur checkpoint, on schedule",
     },
     notes: [],
   },
@@ -201,42 +199,44 @@ export const VEHICLES: Vehicle[] = [
     ...DEALERS.KRISHNA,
     invoice: {
       number: "HMIL-INV-2026-08-1074",
-      date: "2026-08-15",
+      date: "2026-08-16",
       amount: 760000,
       gst: 215000,
       irn: "3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
     },
     allocationRef: "ALC-CHD-2026-0855",
     priceCircularRef: "PC-2026-08-01",
-    bank: {
-      name: DEALERS.KRISHNA.bankName,
-      status: "RECEIVED",
-      chassisOnConfirmation: "4004",
-      amount: 760000,
-      receivedAt: "2026-08-16T12:00:00+05:30",
+    dispatch: {
+      status: "RAISED",
+      ewbNo: "EWB-4004-8841",
+      challanNo: "DC-4004-2026",
+      chassisOnDocs: "4004",
+      validTill: "2026-08-25",
+      raisedAt: "2026-08-18T06:00:00+05:30",
     },
     checks: {
       chassisMatch: "CLEAR",
       variantColourMatch: "CLEAR",
       priceMatch: "CLEAR",
-      fundingPresent: "CLEAR",
       taxTotalsMatch: "CLEAR",
+      dispatchDocsPresent: "CLEAR",
     },
     overall: "CLEAR",
     stage: "GATE_OUT",
     stageTimestamps: {
-      INVOICED: "2026-08-15T09:00:00+05:30",
-      ALLOCATION_MATCHED: "2026-08-15T09:10:00+05:30",
-      FUNDING_PENDING: "2026-08-15T09:15:00+05:30",
-      FUNDING_RECEIVED: "2026-08-16T12:00:00+05:30",
-      GATE_OUT: "2026-08-17T08:45:00+05:30",
+      INVOICED: "2026-08-16T09:00:00+05:30",
+      ALLOCATION_MATCHED: "2026-08-16T09:10:00+05:30",
+      DOCS_VERIFIED: "2026-08-17T11:00:00+05:30",
+      DISPATCH_READY: "2026-08-18T06:00:00+05:30",
+      GATE_OUT: "2026-08-18T08:00:00+05:30",
     },
     lsp: {
       name: LSP_SPEEDLINE,
       truckNo: "PB-11-AT-6634",
       route: "Sriperumbudur (TN) → Chandigarh (PB)",
       etaDays: 4,
-      lastMilestone: "Awaiting pickup at plant yard",
+      lastMilestone:
+        "Awaiting pickup at plant yard",
     },
     notes: [],
   },
@@ -249,39 +249,40 @@ export const VEHICLES: Vehicle[] = [
     ...DEALERS.METRO,
     invoice: {
       number: "HMIL-INV-2026-08-1085",
-      date: "2026-08-16",
+      date: "2026-08-17",
       amount: 1150000,
       gst: 325000,
       irn: "4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a",
     },
     allocationRef: "ALC-LDH-2026-0523",
     priceCircularRef: "PC-2026-08-01",
-    bank: {
-      name: DEALERS.METRO.bankName,
-      status: "RECEIVED",
-      chassisOnConfirmation: "4005",
-      amount: 1150000,
-      receivedAt: "2026-08-18T15:30:00+05:30",
+    dispatch: {
+      status: "RAISED",
+      ewbNo: "EWB-4005-8841",
+      challanNo: "DC-4005-2026",
+      chassisOnDocs: "4005",
+      validTill: "2026-08-25",
+      raisedAt: "2026-08-19T09:00:00+05:30",
     },
     checks: {
       chassisMatch: "CLEAR",
       variantColourMatch: "CLEAR",
       priceMatch: "CLEAR",
-      fundingPresent: "CLEAR",
       taxTotalsMatch: "CLEAR",
+      dispatchDocsPresent: "CLEAR",
     },
     overall: "CLEAR",
-    stage: "FUNDING_RECEIVED",
+    stage: "DISPATCH_READY",
     stageTimestamps: {
-      INVOICED: "2026-08-16T09:00:00+05:30",
-      ALLOCATION_MATCHED: "2026-08-16T09:10:00+05:30",
-      FUNDING_PENDING: "2026-08-16T09:15:00+05:30",
-      FUNDING_RECEIVED: "2026-08-18T15:30:00+05:30",
+      INVOICED: "2026-08-17T09:30:00+05:30",
+      ALLOCATION_MATCHED: "2026-08-17T09:40:00+05:30",
+      DOCS_VERIFIED: "2026-08-18T15:30:00+05:30",
+      DISPATCH_READY: "2026-08-19T09:00:00+05:30",
     },
     notes: [],
   },
 
-  // ---- 2 FUNDING_PENDING < 24h (normal bank lag) ----
+  // ---- 2 waiting on document verification, still inside SLA ----
   {
     vin: "MALBB51RLSM104006",
     chassisShort: "4006",
@@ -298,23 +299,19 @@ export const VEHICLES: Vehicle[] = [
     },
     allocationRef: "ALC-CHD-2026-0871",
     priceCircularRef: "PC-2026-08-01",
-    bank: {
-      name: DEALERS.KRISHNA.bankName,
-      status: "PENDING",
-    },
+    dispatch: { status: "NOT_RAISED" },
     checks: {
-      chassisMatch: "PENDING",
+      chassisMatch: "CLEAR",
       variantColourMatch: "CLEAR",
       priceMatch: "CLEAR",
-      fundingPresent: "PENDING",
       taxTotalsMatch: "CLEAR",
+      dispatchDocsPresent: "PENDING",
     },
     overall: "CLEAR",
-    stage: "FUNDING_PENDING",
+    stage: "ALLOCATION_MATCHED",
     stageTimestamps: {
-      INVOICED: "2026-08-19T08:00:00+05:30",
-      ALLOCATION_MATCHED: "2026-08-19T08:05:00+05:30",
-      FUNDING_PENDING: "2026-08-19T08:10:00+05:30",
+      INVOICED: "2026-08-19T09:00:00+05:30",
+      ALLOCATION_MATCHED: "2026-08-19T09:10:00+05:30",
     },
     notes: [],
   },
@@ -327,35 +324,31 @@ export const VEHICLES: Vehicle[] = [
     ...DEALERS.METRO,
     invoice: {
       number: "HMIL-INV-2026-08-1107",
-      date: "2026-08-19",
+      date: "2026-08-18",
       amount: 680000,
       gst: 190000,
       irn: "6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
     },
     allocationRef: "ALC-LDH-2026-0534",
     priceCircularRef: "PC-2026-08-01",
-    bank: {
-      name: DEALERS.METRO.bankName,
-      status: "PENDING",
-    },
+    dispatch: { status: "NOT_RAISED" },
     checks: {
-      chassisMatch: "PENDING",
+      chassisMatch: "CLEAR",
       variantColourMatch: "CLEAR",
       priceMatch: "CLEAR",
-      fundingPresent: "PENDING",
       taxTotalsMatch: "CLEAR",
+      dispatchDocsPresent: "PENDING",
     },
     overall: "CLEAR",
-    stage: "FUNDING_PENDING",
+    stage: "ALLOCATION_MATCHED",
     stageTimestamps: {
-      INVOICED: "2026-08-18T18:30:00+05:30",
-      ALLOCATION_MATCHED: "2026-08-18T18:35:00+05:30",
-      FUNDING_PENDING: "2026-08-18T18:40:00+05:30",
+      INVOICED: "2026-08-18T16:00:00+05:30",
+      ALLOCATION_MATCHED: "2026-08-18T16:10:00+05:30",
     },
     notes: [],
   },
 
-  // ---- 1 chassis mismatch — THE hero stuck car ----
+  // ---- 1 dispatch-document mismatch — THE hero stuck car ----
   {
     vin: "MALBB51RLSM104921",
     chassisShort: "4921",
@@ -372,41 +365,41 @@ export const VEHICLES: Vehicle[] = [
     },
     allocationRef: "ALC-CHD-2026-0844",
     priceCircularRef: "PC-2026-08-01",
-    bank: {
-      name: DEALERS.KRISHNA.bankName,
+    dispatch: {
       status: "MISMATCH",
-      chassisOnConfirmation: "4912",
-      amount: 1570000,
-      receivedAt: "2026-08-15T10:05:00+05:30",
+      ewbNo: "EWB-4912-8841",
+      challanNo: "DC-4912-2026",
+      chassisOnDocs: "4912",
+      validTill: "2026-08-22",
+      raisedAt: "2026-08-15T10:05:00+05:30",
     },
     checks: {
       chassisMatch: "MISMATCH",
       variantColourMatch: "CLEAR",
       priceMatch: "CLEAR",
-      fundingPresent: "CLEAR",
       taxTotalsMatch: "CLEAR",
+      dispatchDocsPresent: "MISMATCH",
     },
     overall: "STUCK",
     stuckReason:
-      "Bank funding confirmation cites chassis 4912, invoice says 4921 — gate pass blocked until chassis numbers match.",
-    stage: "FUNDING_RECEIVED",
+      "Dispatch papers were raised against chassis 4912; the invoice is for 4921 — the gate pass stays blocked until the e-way bill and the invoice agree.",
+    stage: "ALLOCATION_MATCHED",
     stageTimestamps: {
       INVOICED: "2026-08-11T09:00:00+05:30",
       ALLOCATION_MATCHED: "2026-08-11T09:10:00+05:30",
-      FUNDING_PENDING: "2026-08-11T09:15:00+05:30",
-      FUNDING_RECEIVED: "2026-08-15T10:05:00+05:30",
     },
     notes: [
       {
         author: "Rakesh Mehta",
         role: "ro",
-        text: "Flagged to Krishna Hyundai accounts team — please recheck the chassis number sent to HDFC on the funding request.",
+        text:
+          "Flagged to the Sriperumbudur dispatch desk — cancel the e-way bill raised on 4912 and re-raise it against 4921 before the truck is loaded.",
         at: "2026-08-16T11:05:00+05:30",
       },
     ],
   },
 
-  // ---- 1 price mismatch ----
+  // ---- 1 price-circular mismatch ----
   {
     vin: "MALBB51RLSM104009",
     chassisShort: "4009",
@@ -423,34 +416,26 @@ export const VEHICLES: Vehicle[] = [
     },
     allocationRef: "ALC-CHD-2026-0849",
     priceCircularRef: "PC-2026-07-01",
-    bank: {
-      name: DEALERS.KRISHNA.bankName,
-      status: "RECEIVED",
-      chassisOnConfirmation: "4009",
-      amount: 1120000,
-      receivedAt: "2026-08-15T09:50:00+05:30",
-    },
+    dispatch: { status: "NOT_RAISED" },
     checks: {
       chassisMatch: "CLEAR",
       variantColourMatch: "CLEAR",
       priceMatch: "MISMATCH",
-      fundingPresent: "CLEAR",
       taxTotalsMatch: "CLEAR",
+      dispatchDocsPresent: "PENDING",
     },
     overall: "STUCK",
     stuckReason:
-      "Invoice priced off the July circular (PC-2026-07-01); the August circular (PC-2026-08-01) is the one active on the invoice date — price mismatch to resolve before gate pass.",
-    stage: "FUNDING_RECEIVED",
+      "Invoice priced off the July circular (PC-2026-07-01); the August circular (PC-2026-08-01) is the one active on the invoice date — price mismatch to resolve before dispatch papers can be raised.",
+    stage: "ALLOCATION_MATCHED",
     stageTimestamps: {
       INVOICED: "2026-08-14T09:00:00+05:30",
       ALLOCATION_MATCHED: "2026-08-14T09:10:00+05:30",
-      FUNDING_PENDING: "2026-08-14T09:15:00+05:30",
-      FUNDING_RECEIVED: "2026-08-15T09:50:00+05:30",
     },
     notes: [],
   },
 
-  // ---- 1 variant mismatch ----
+  // ---- 1 allocation variant mismatch ----
   {
     vin: "MALBB51RLSM104010",
     chassisShort: "4010",
@@ -467,34 +452,26 @@ export const VEHICLES: Vehicle[] = [
     },
     allocationRef: "ALC-LDH-2026-0541",
     priceCircularRef: "PC-2026-08-01",
-    bank: {
-      name: DEALERS.METRO.bankName,
-      status: "RECEIVED",
-      chassisOnConfirmation: "4010",
-      amount: 950000,
-      receivedAt: "2026-08-14T10:15:00+05:30",
-    },
+    dispatch: { status: "NOT_RAISED" },
     checks: {
       chassisMatch: "CLEAR",
       variantColourMatch: "MISMATCH",
       priceMatch: "CLEAR",
-      fundingPresent: "CLEAR",
       taxTotalsMatch: "CLEAR",
+      dispatchDocsPresent: "PENDING",
     },
     overall: "STUCK",
     stuckReason:
-      "Allocation was issued for variant SX; the invoice was raised for SX(O) — variant mismatch to resolve before gate pass.",
-    stage: "FUNDING_RECEIVED",
+      "Allocation was issued for variant SX; the invoice was raised for SX(O) — variant mismatch to resolve before dispatch papers can be raised.",
+    stage: "ALLOCATION_MATCHED",
     stageTimestamps: {
       INVOICED: "2026-08-13T09:00:00+05:30",
       ALLOCATION_MATCHED: "2026-08-13T09:10:00+05:30",
-      FUNDING_PENDING: "2026-08-13T09:15:00+05:30",
-      FUNDING_RECEIVED: "2026-08-14T10:15:00+05:30",
     },
     notes: [],
   },
 
-  // ---- 1 funding pending > 72h (SLA breach) ----
+  // ---- 1 document-verification SLA breach ----
   {
     vin: "MALBB51RLSM104011",
     chassisShort: "4011",
@@ -511,37 +488,34 @@ export const VEHICLES: Vehicle[] = [
     },
     allocationRef: "ALC-CHD-2026-0862",
     priceCircularRef: "PC-2026-08-01",
-    bank: {
-      name: DEALERS.KRISHNA.bankName,
-      status: "PENDING",
-    },
+    dispatch: { status: "NOT_RAISED" },
     checks: {
-      chassisMatch: "PENDING",
+      chassisMatch: "CLEAR",
       variantColourMatch: "CLEAR",
       priceMatch: "CLEAR",
-      fundingPresent: "PENDING",
       taxTotalsMatch: "CLEAR",
+      dispatchDocsPresent: "PENDING",
     },
     overall: "STUCK",
     stuckReason:
-      "Funding confirmation pending 76h — breaches the 48–72h SLA norm for dealer-finance turnaround.",
-    stage: "FUNDING_PENDING",
+      "Document verification has been open 76h — past the 48h check-and-clear SLA, so no dispatch paperwork has been raised yet.",
+    stage: "ALLOCATION_MATCHED",
     stageTimestamps: {
-      INVOICED: "2026-08-16T11:00:00+05:30",
-      ALLOCATION_MATCHED: "2026-08-16T11:05:00+05:30",
-      FUNDING_PENDING: "2026-08-16T11:10:00+05:30",
+      INVOICED: "2026-08-16T10:50:00+05:30",
+      ALLOCATION_MATCHED: "2026-08-16T11:00:00+05:30",
     },
     notes: [
       {
         author: "Priya Nair",
         role: "ro",
-        text: "Escalated to HQ — this is now past the 72h SLA window, please chase HDFC dealer-finance desk.",
+        text:
+          "Escalated to HQ — this car is well past the 24h document-verification SLA; please push the dispatch desk to clear the checks today.",
         at: "2026-08-19T09:30:00+05:30",
       },
     ],
   },
 
-  // ---- 1 VIN-swap substitution ----
+  // ---- 1 damaged unit awaiting substitution ----
   {
     vin: "MALBB51RLSM104012",
     chassisShort: "4012",
@@ -558,36 +532,34 @@ export const VEHICLES: Vehicle[] = [
     },
     allocationRef: "ALC-CHD-2026-0868",
     priceCircularRef: "PC-2026-08-01",
-    bank: {
-      name: DEALERS.KRISHNA.bankName,
-      status: "PENDING",
-    },
+    dispatch: { status: "NOT_RAISED" },
     checks: {
       chassisMatch: "PENDING",
       variantColourMatch: "CLEAR",
       priceMatch: "CLEAR",
-      fundingPresent: "PENDING",
       taxTotalsMatch: "CLEAR",
+      dispatchDocsPresent: "PENDING",
     },
     overall: "STUCK",
     stuckReason:
-      "Original chassis 4012 was damaged during plant loading. A substitute VIN allocation is in progress with the RO — funding request will be reissued once confirmed.",
+      "Original chassis 4012 was damaged during plant loading. A substitute VIN allocation is in progress with the RO — the invoice will be re-raised against the substitute unit.",
     stage: "ALLOCATION_MATCHED",
     stageTimestamps: {
-      INVOICED: "2026-08-17T09:00:00+05:30",
-      ALLOCATION_MATCHED: "2026-08-17T09:10:00+05:30",
+      INVOICED: "2026-08-17T08:50:00+05:30",
+      ALLOCATION_MATCHED: "2026-08-17T09:00:00+05:30",
     },
     notes: [
       {
         author: "Suresh Iyer",
         role: "plant",
-        text: "Damage noted during forklift loading at Sriperumbudur yard. Substitution request raised with RO for a like-for-like unit.",
+        text:
+          "Damage noted during forklift loading at Sriperumbudur yard. Substitution request raised with RO for a like-for-like unit.",
         at: "2026-08-17T13:45:00+05:30",
       },
     ],
   },
 
-  // ---- 2 in transit with LSP milestones ----
+  // ---- 2 in transit, one of them running late ----
   {
     vin: "MALBB51RLSM104013",
     chassisShort: "4013",
@@ -597,43 +569,45 @@ export const VEHICLES: Vehicle[] = [
     ...DEALERS.KRISHNA,
     invoice: {
       number: "HMIL-INV-2026-08-1157",
-      date: "2026-08-10",
+      date: "2026-08-15",
       amount: 1240000,
       gst: 348000,
       irn: "2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c",
     },
     allocationRef: "ALC-CHD-2026-0839",
     priceCircularRef: "PC-2026-08-01",
-    bank: {
-      name: DEALERS.KRISHNA.bankName,
-      status: "RECEIVED",
-      chassisOnConfirmation: "4013",
-      amount: 1240000,
-      receivedAt: "2026-08-11T10:30:00+05:30",
+    dispatch: {
+      status: "RAISED",
+      ewbNo: "EWB-4013-8841",
+      challanNo: "DC-4013-2026",
+      chassisOnDocs: "4013",
+      validTill: "2026-08-25",
+      raisedAt: "2026-08-17T06:10:00+05:30",
     },
     checks: {
       chassisMatch: "CLEAR",
       variantColourMatch: "CLEAR",
       priceMatch: "CLEAR",
-      fundingPresent: "CLEAR",
       taxTotalsMatch: "CLEAR",
+      dispatchDocsPresent: "CLEAR",
     },
     overall: "CLEAR",
     stage: "IN_TRANSIT",
     stageTimestamps: {
-      INVOICED: "2026-08-10T09:00:00+05:30",
-      ALLOCATION_MATCHED: "2026-08-10T09:10:00+05:30",
-      FUNDING_PENDING: "2026-08-10T09:15:00+05:30",
-      FUNDING_RECEIVED: "2026-08-11T10:30:00+05:30",
-      GATE_OUT: "2026-08-12T08:00:00+05:30",
-      IN_TRANSIT: "2026-08-12T09:00:00+05:30",
+      INVOICED: "2026-08-15T10:00:00+05:30",
+      ALLOCATION_MATCHED: "2026-08-15T10:10:00+05:30",
+      DOCS_VERIFIED: "2026-08-16T13:00:00+05:30",
+      DISPATCH_READY: "2026-08-17T06:10:00+05:30",
+      GATE_OUT: "2026-08-17T08:10:00+05:30",
+      IN_TRANSIT: "2026-08-17T09:10:00+05:30",
     },
     lsp: {
       name: LSP_SPEEDLINE,
       truckNo: "PB-11-AT-7712",
       route: "Sriperumbudur (TN) → Chandigarh (PB)",
       etaDays: 4,
-      lastMilestone: "In transit — on schedule, ETA in 1 day",
+      lastMilestone:
+        "In transit — on schedule, ETA in 1 day",
     },
     notes: [],
   },
@@ -646,43 +620,45 @@ export const VEHICLES: Vehicle[] = [
     ...DEALERS.METRO,
     invoice: {
       number: "HMIL-INV-2026-08-1168",
-      date: "2026-08-09",
+      date: "2026-08-12",
       amount: 850000,
       gst: 238000,
       irn: "3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d",
     },
     allocationRef: "ALC-LDH-2026-0505",
     priceCircularRef: "PC-2026-08-01",
-    bank: {
-      name: DEALERS.METRO.bankName,
-      status: "RECEIVED",
-      chassisOnConfirmation: "4014",
-      amount: 850000,
-      receivedAt: "2026-08-10T09:20:00+05:30",
+    dispatch: {
+      status: "RAISED",
+      ewbNo: "EWB-4014-8841",
+      challanNo: "DC-4014-2026",
+      chassisOnDocs: "4014",
+      validTill: "2026-08-25",
+      raisedAt: "2026-08-14T05:45:00+05:30",
     },
     checks: {
       chassisMatch: "CLEAR",
       variantColourMatch: "CLEAR",
       priceMatch: "CLEAR",
-      fundingPresent: "CLEAR",
       taxTotalsMatch: "CLEAR",
+      dispatchDocsPresent: "CLEAR",
     },
     overall: "CLEAR",
     stage: "IN_TRANSIT",
     stageTimestamps: {
-      INVOICED: "2026-08-09T09:00:00+05:30",
-      ALLOCATION_MATCHED: "2026-08-09T09:10:00+05:30",
-      FUNDING_PENDING: "2026-08-09T09:15:00+05:30",
-      FUNDING_RECEIVED: "2026-08-10T09:20:00+05:30",
-      GATE_OUT: "2026-08-11T08:00:00+05:30",
-      IN_TRANSIT: "2026-08-11T09:00:00+05:30",
+      INVOICED: "2026-08-12T09:00:00+05:30",
+      ALLOCATION_MATCHED: "2026-08-12T09:10:00+05:30",
+      DOCS_VERIFIED: "2026-08-13T10:00:00+05:30",
+      DISPATCH_READY: "2026-08-14T05:45:00+05:30",
+      GATE_OUT: "2026-08-14T07:45:00+05:30",
+      IN_TRANSIT: "2026-08-14T08:45:00+05:30",
     },
     lsp: {
       name: LSP_SPEEDLINE,
       truckNo: "PB-65-BT-3381",
       route: "Sriperumbudur (TN) → Ludhiana (PB)",
       etaDays: 4,
-      lastMilestone: "Delayed — held at Nagpur checkpoint for inspection, +2 days vs ETA",
+      lastMilestone:
+        "Delayed — held at Nagpur checkpoint for inspection, +2 days vs ETA",
     },
     notes: [],
   },
@@ -782,7 +758,7 @@ export const TRIPS: Trip[] = [
     milestones: [
       {
         label: "Gate-out, Sriperumbudur",
-        at: "2026-08-16T07:45:00+05:30",
+        at: "2026-08-14T07:45:00+05:30",
         reached: true,
         t: 0,
         lat: 12.9675,
@@ -1013,13 +989,13 @@ export const ORDERS: Order[] = [
  * ------------------------------------------------------------------------ */
 
 const DOC_SHARING: Record<DocKind, { issuedBy: Role; sharedWith: Role[] }> = {
-  INVOICE: { issuedBy: "hq", sharedWith: ["plant", "ro", "dealer", "bank"] },
+  INVOICE: { issuedBy: "hq", sharedWith: ["plant", "ro", "dealer"] },
   ALLOCATION: { issuedBy: "hq", sharedWith: ["plant", "ro", "dealer"] },
   PRICE_CIRCULAR: { issuedBy: "hq", sharedWith: ["plant", "ro", "dealer"] },
-  // The bank issues once, and both the manufacturer and the dealer have it.
-  FUNDING_CONFIRMATION: { issuedBy: "bank", sharedWith: ["hq", "plant", "ro", "dealer"] },
-  EWAY_BILL: { issuedBy: "plant", sharedWith: ["hq", "lsp", "dealer"] },
-  DELIVERY_CHALLAN: { issuedBy: "plant", sharedWith: ["hq", "lsp", "dealer"] },
+  // The plant raises the dispatch papers once; the manufacturer, the RO, the
+  // transporter and the dealer all read the same copy.
+  EWAY_BILL: { issuedBy: "plant", sharedWith: ["hq", "ro", "lsp", "dealer"] },
+  DELIVERY_CHALLAN: { issuedBy: "plant", sharedWith: ["hq", "ro", "lsp", "dealer"] },
   POD: { issuedBy: "lsp", sharedWith: ["hq", "ro", "dealer"] },
 };
 
@@ -1054,13 +1030,11 @@ export function makeDoc(
  * Document-level defects seeded on otherwise-clean cars. They exist so the
  * compliance engine has something to catch that the five stuck cars don't
  * already show — a wrong dealer code on a challan, a missing e-way bill, an
- * unfilled IRN, a short-paid funding confirmation.
+ * unfilled IRN, a lapsed e-way bill.
  */
 interface DocDefect {
   drop?: DocKind[];
   patch?: Partial<Record<DocKind, Record<string, string>>>;
-  /** Rupees the bank under-released against the invoice — applied to the confirmation. */
-  fundingShortBy?: number;
 }
 
 const DOC_DEFECTS: Record<string, DocDefect> = {
@@ -1070,8 +1044,8 @@ const DOC_DEFECTS: Record<string, DocDefect> = {
   MALBB51RLSM104004: { drop: ["EWAY_BILL"] },
   // Invoice uploaded before the IRN came back from the IRP.
   MALBB51RLSM104002: { patch: { INVOICE: { irn: "" } } },
-  // Bank confirmed ₹10,000 short of the invoice total.
-  MALBB51RLSM104005: { fundingShortBy: 10000 },
+  // Papers raised early; the e-way bill lapsed before the truck was loaded.
+  MALBB51RLSM104005: { patch: { EWAY_BILL: { validTill: "2026-08-18" } } },
   // Allocation advice was raised for the lower variant — the paper trail the
   // vehicle's own stuck reason describes.
   MALBB51RLSM104010: { patch: { ALLOCATION: { variant: "SX" } } },
@@ -1123,29 +1097,21 @@ export function buildDocuments(vehicles: Vehicle[]): ComplianceDoc[] {
       irn: v.invoice.irn,
     });
 
-    if (v.bank.status !== "PENDING" && v.bank.receivedAt) {
-      push("FUNDING_CONFIRMATION", `FC-${v.chassisShort}-2026`, v.bank.receivedAt, {
-        bank: v.bank.name,
-        chassis: v.bank.chassisOnConfirmation ?? "",
-        amount: String((v.bank.amount ?? 0) - (defect?.fundingShortBy ?? 0)),
-        receivedAt: v.bank.receivedAt,
-        dealerCode: v.dealerCode,
-      });
-    }
-
-    const gateOut = v.stageTimestamps.GATE_OUT;
-    if (gateOut) {
-      push("EWAY_BILL", `EWB-${v.chassisShort}-8841`, gateOut, {
-        ewbNo: `EWB-${v.chassisShort}-8841`,
-        chassis: v.chassisShort,
+    // Dispatch papers exist from the moment the plant raises them — including
+    // the hero case, where they carry the wrong chassis and stop the car.
+    if (v.dispatch.status !== "NOT_RAISED" && v.dispatch.raisedAt) {
+      const onDocs = v.dispatch.chassisOnDocs ?? v.chassisShort;
+      push("EWAY_BILL", v.dispatch.ewbNo ?? `EWB-${onDocs}-8841`, v.dispatch.raisedAt, {
+        ewbNo: v.dispatch.ewbNo ?? `EWB-${onDocs}-8841`,
+        chassis: onDocs,
         truckNo: v.lsp?.truckNo ?? "—",
         from: "Sriperumbudur (TN)",
         to: v.region,
-        validTill: "2026-08-25",
+        validTill: v.dispatch.validTill ?? "2026-08-25",
       });
-      push("DELIVERY_CHALLAN", `DC-${v.chassisShort}-2026`, gateOut, {
-        challanNo: `DC-${v.chassisShort}-2026`,
-        chassis: v.chassisShort,
+      push("DELIVERY_CHALLAN", v.dispatch.challanNo ?? `DC-${onDocs}-2026`, v.dispatch.raisedAt, {
+        challanNo: v.dispatch.challanNo ?? `DC-${onDocs}-2026`,
+        chassis: onDocs,
         dealerCode: v.dealerCode,
         dealerName: v.dealerName,
         truckNo: v.lsp?.truckNo ?? "—",

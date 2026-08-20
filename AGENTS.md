@@ -26,17 +26,21 @@ tool call, and flag it again if you see it re-appear anywhere.**
 
 - **Frontend only.** No API routes, no server actions that persist data, no database,
   no external services. Every screen renders from static mock data + client state.
-- **Mock auth only.** Login = picking one of 6 hardcoded demo accounts, stored in
+- **Mock auth only.** Login = picking one of 5 hardcoded demo accounts, stored in
   React context + `sessionStorage`. No password hashing, no JWT, no NextAuth.
 - **Role isolation is the product**, not a UI nicety. Every data read for every role
   must go through `getVehiclesForRole()` in `lib/selectors.ts`. Pages and components
   never import `lib/mockData.ts` directly — that's the one rule most likely to be
   violated by a careless edit, and it silently breaks the RBAC story of the demo.
+- **Goods flow and document flow only.** There is no money leg anywhere in this
+  build — no bank persona, no funding stages, no payment status. A car moves
+  INVOICED → ALLOCATION_MATCHED → DOCS_VERIFIED → DISPATCH_READY → GATE_OUT →
+  IN_TRANSIT → DELIVERED, and the documents (price circular, allocation, invoice,
+  e-way bill, delivery challan, POD) are what gate that movement. Do not
+  reintroduce funding, financing or payment concepts.
 - **No real integrations, with one exception.** The tracking screens draw
   OpenStreetMap tiles through Leaflet — the only runtime network call in the build,
-  keyless and read-only. Everything else still renders from static mock data. The
-  bank is still a status source, not a connected party: it raises its funding
-  confirmation *onto the shared record*, and DhanFlow never sends anything to it.
+  keyless and read-only. Everything else renders from static mock data.
 - **Invoices are raised in-app, but only from a verified order.** The manufacturer
   turns a verified dealer order into dummy invoice(s) plus their documents in client
   state (`raiseInvoiceForOrder`). Nothing is persisted and no real invoice format is
@@ -63,15 +67,14 @@ app/
   hq/ plant/ ro/ dealer/ bank/ lsp/page.tsx   — one dashboard per role (+ sub-pages)
   dealer/tracking, lsp/tracking  — live tracking screen (map + timeline)
   hq/orders, dealer/orders       — ERP: dealer books, manufacturer verifies (ATP) and invoices
-  hq/compliance, dealer/compliance — document alerts + the end-of-run report
-  bank/documents                 — the bank raises its confirmation onto the shared record
+  {hq,plant,ro,dealer}/compliance — document alerts, the compliance report and the SLA scoreboard
   vehicle/[vin]/page.tsx         — shared VIN detail, content role-scoped
 components/
   DashboardShell, PersonaBar, Sidebar, KpiStrip, PipelineBoard, VehicleCard,
   JourneyRail, ExceptionList, CheckRail, DocCompare, NotesThread, RoleGate,
   StatusChip, Chatbot, ChatSnippet, TrackingBoard, TrackingMap (Leaflet/OSM),
   OrderCard, OrderBookingForm, AtpPanel, DocumentList, ComplianceAlerts,
-  ComplianceReportView, HqCharts
+  ComplianceReportView, ComplianceScreen, SlaReportView, VehicleSlaStrip, HqCharts
 lib/
   types.ts       — Vehicle/Stage/CheckStatus/Role/Trip types
   mockData.ts    — the 14 hardcoded vehicles + 2 trips (single source of truth for data)
@@ -79,6 +82,7 @@ lib/
                     orders, documents and compliance scoping
   erp.ts         — available-to-promise: stock vs build slot vs promised date
   compliance.ts  — the document rulebook (R01–R10) and the report builder
+  sla.ts         — the six mock SLAs (SLA-01…06) and the attainment scoreboard
   chatContent.ts — the canned per-persona chatbot scripts
   roleTheme.ts   — role hues mirrored from CSS, for the per-persona favicon
   auth.tsx       — AuthContext (role, login/logout, sessionStorage)
@@ -113,4 +117,8 @@ lib/
   IBM Plex Mono (`.font-mono-vin`) for every identifier, amount and timestamp.
 - `JourneyRail` is the signature element: same grammar in `mini` / `compact` / `full`.
   Polish it hardest; keep everything around it disciplined.
+- `tests/smoke.spec.ts` is a Playwright smoke suite over every persona, the ERP
+  flow, the document rulebook, the SLA report, tracking and the assistant. Run it
+  with `npm run test:e2e` (it starts its own dev server on port 3100). It also
+  asserts there are no console errors, so keep it green.
 - Keep `npm run build` and `npm run lint` clean before each commit.

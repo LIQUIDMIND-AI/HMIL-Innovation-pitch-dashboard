@@ -1,10 +1,16 @@
-export type Role = "hq" | "plant" | "ro" | "dealer" | "bank" | "lsp";
+/** Five parties move the goods and the paperwork. There is no money leg here. */
+export type Role = "hq" | "plant" | "ro" | "dealer" | "lsp";
 
+/**
+ * The goods flow, from the invoice that commits a car to the delivery that
+ * closes it. `DOCS_VERIFIED` is the paperwork gate: every cross-document check
+ * has to clear before dispatch papers can be raised.
+ */
 export type Stage =
   | "INVOICED"
   | "ALLOCATION_MATCHED"
-  | "FUNDING_PENDING"
-  | "FUNDING_RECEIVED"
+  | "DOCS_VERIFIED"
+  | "DISPATCH_READY"
   | "GATE_OUT"
   | "IN_TRANSIT"
   | "DELIVERED";
@@ -12,8 +18,8 @@ export type Stage =
 export const STAGE_ORDER: Stage[] = [
   "INVOICED",
   "ALLOCATION_MATCHED",
-  "FUNDING_PENDING",
-  "FUNDING_RECEIVED",
+  "DOCS_VERIFIED",
+  "DISPATCH_READY",
   "GATE_OUT",
   "IN_TRANSIT",
   "DELIVERED",
@@ -22,8 +28,8 @@ export const STAGE_ORDER: Stage[] = [
 export const STAGE_LABELS: Record<Stage, string> = {
   INVOICED: "Invoiced",
   ALLOCATION_MATCHED: "Allocation Matched",
-  FUNDING_PENDING: "Funding Pending",
-  FUNDING_RECEIVED: "Funding Received",
+  DOCS_VERIFIED: "Documents Verified",
+  DISPATCH_READY: "Dispatch Papers Raised",
   GATE_OUT: "Gate-out",
   IN_TRANSIT: "In Transit",
   DELIVERED: "Delivered",
@@ -42,20 +48,27 @@ export interface Invoice {
   irn: string;
 }
 
-export interface BankInfo {
-  name: string;
-  status: "PENDING" | "RECEIVED" | "MISMATCH";
-  chassisOnConfirmation?: string;
-  amount?: number;
-  receivedAt?: string;
+/**
+ * The dispatch paperwork the plant raises to move a car: e-way bill and
+ * delivery challan. `chassisOnDocs` is what those papers actually say — when it
+ * disagrees with the invoice, the car does not leave the yard.
+ */
+export interface DispatchDocs {
+  status: "NOT_RAISED" | "RAISED" | "MISMATCH";
+  ewbNo?: string;
+  challanNo?: string;
+  chassisOnDocs?: string;
+  validTill?: string;
+  raisedAt?: string;
 }
 
 export interface VehicleChecks {
   chassisMatch: CheckStatus;
   variantColourMatch: CheckStatus;
   priceMatch: CheckStatus;
-  fundingPresent: CheckStatus;
   taxTotalsMatch: CheckStatus;
+  /** E-way bill + delivery challan raised, valid, and agreeing with the invoice. */
+  dispatchDocsPresent: CheckStatus;
 }
 
 export interface LspInfo {
@@ -85,7 +98,7 @@ export interface Vehicle {
   invoice: Invoice;
   allocationRef: string;
   priceCircularRef: string;
-  bank: BankInfo;
+  dispatch: DispatchDocs;
   checks: VehicleChecks;
   overall: "CLEAR" | "STUCK";
   stuckReason?: string;
@@ -212,7 +225,6 @@ export type DocKind =
   | "INVOICE"
   | "ALLOCATION"
   | "PRICE_CIRCULAR"
-  | "FUNDING_CONFIRMATION"
   | "EWAY_BILL"
   | "DELIVERY_CHALLAN"
   | "POD";
@@ -221,7 +233,6 @@ export const DOC_LABELS: Record<DocKind, string> = {
   INVOICE: "Tax invoice",
   ALLOCATION: "Allocation advice",
   PRICE_CIRCULAR: "Price circular",
-  FUNDING_CONFIRMATION: "Funding confirmation",
   EWAY_BILL: "E-way bill",
   DELIVERY_CHALLAN: "Delivery challan",
   POD: "Proof of delivery",
@@ -229,9 +240,9 @@ export const DOC_LABELS: Record<DocKind, string> = {
 
 /**
  * One document on the shared record. `issuedBy` is the party that raised it and
- * `sharedWith` is everyone it was distributed to — the bank's funding
- * confirmation, for instance, reaches the manufacturer and the dealer at the
- * same instant instead of being emailed to one of them.
+ * `sharedWith` is everyone it was distributed to — the plant's e-way bill, for
+ * instance, reaches the manufacturer, the transporter and the dealer at the same
+ * instant instead of being emailed to one of them.
  */
 export interface ComplianceDoc {
   id: string;
@@ -258,4 +269,31 @@ export interface ComplianceFinding {
   found?: string;
   /** The documents that disagree — what the reviewer has to open. */
   docs: DocKind[];
+}
+
+
+/* ---------------------------------------------------------------------------
+ * Service levels
+ * ------------------------------------------------------------------------ */
+
+export type SlaOutcome = "MET" | "BREACHED" | "AT_RISK" | "RUNNING" | "NOT_STARTED";
+
+/** A promised turnaround between two points in the goods or document flow. */
+export interface SlaDefinition {
+  id: string;
+  label: string;
+  /** What the clock is protecting, in one line. */
+  intent: string;
+  from: Stage;
+  to: Stage;
+  targetHours: number;
+}
+
+export interface SlaResult {
+  slaId: string;
+  vin: string;
+  outcome: SlaOutcome;
+  /** Hours actually taken, or elapsed so far when the leg is still running. */
+  elapsedHours: number | null;
+  targetHours: number;
 }

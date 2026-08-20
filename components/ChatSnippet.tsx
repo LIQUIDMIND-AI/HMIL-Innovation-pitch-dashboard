@@ -14,8 +14,8 @@ const CHECK_LABELS: Record<keyof VehicleChecks, string> = {
   chassisMatch: "Chassis",
   variantColourMatch: "Variant & colour",
   priceMatch: "Price",
-  fundingPresent: "Funding",
   taxTotalsMatch: "Tax totals",
+  dispatchDocsPresent: "Dispatch papers",
 };
 
 function CheckMark({ status }: { status: CheckStatus }) {

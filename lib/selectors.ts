@@ -7,6 +7,7 @@ import {
   docKindsVisibleTo,
 } from "./mockData";
 import { buildComplianceReport, validateAll, type ComplianceReport } from "./compliance";
+import { buildSlaReport, worstOutcome, type SlaReport } from "./sla";
 import {
   STAGE_ORDER,
   type ChipTone,
@@ -19,29 +20,28 @@ import {
   type Vehicle,
 } from "./types";
 
-/** The six legs of the pipeline (plan.md §6) — FUNDING_PENDING/FUNDING_RECEIVED collapse into one "Funding" column. */
+/** The six legs of the goods flow — dispatch papers and gate-out share a column. */
 export const PIPELINE_COLUMNS: { key: string; label: string; stages: Stage[] }[] = [
   { key: "invoiced", label: "Invoiced", stages: ["INVOICED"] },
   { key: "allocation", label: "Allocation Matched", stages: ["ALLOCATION_MATCHED"] },
-  { key: "funding", label: "Funding", stages: ["FUNDING_PENDING", "FUNDING_RECEIVED"] },
-  { key: "gateout", label: "Gate-out", stages: ["GATE_OUT"] },
+  { key: "docs", label: "Documents Verified", stages: ["DOCS_VERIFIED"] },
+  { key: "dispatch", label: "Dispatch & Gate-out", stages: ["DISPATCH_READY", "GATE_OUT"] },
   { key: "transit", label: "In Transit", stages: ["IN_TRANSIT"] },
   { key: "delivered", label: "Delivered", stages: ["DELIVERED"] },
 ];
 
 /**
  * The one demo persona each non-HQ/RO role is scoped to. This is a fixed-cast
- * demo (one dealer, one bank, one LSP, one region) — see plan.md §3.
+ * demo (one dealer, one plant, one LSP, one region).
  */
 const PLANT_STAGES = new Set<Vehicle["stage"]>([
   "INVOICED",
   "ALLOCATION_MATCHED",
-  "FUNDING_PENDING",
-  "FUNDING_RECEIVED",
+  "DOCS_VERIFIED",
+  "DISPATCH_READY",
 ]);
 
 const DEALER_SCOPE_CODE = DEALERS.KRISHNA.dealerCode;
-const BANK_SCOPE_NAME = DEALERS.KRISHNA.bankName;
 const RO_SCOPE_REGION = DEALERS.KRISHNA.region;
 const LSP_SCOPE_NAME = "Speedline Logistics";
 
@@ -62,8 +62,6 @@ export function filterVehiclesForRole(vehicles: Vehicle[], role: Role): Vehicle[
       return vehicles.filter((v) => v.region === RO_SCOPE_REGION);
     case "dealer":
       return vehicles.filter((v) => v.dealerCode === DEALER_SCOPE_CODE);
-    case "bank":
-      return vehicles.filter((v) => v.bank.name === BANK_SCOPE_NAME);
     case "lsp":
       return vehicles.filter((v) => v.lsp?.name === LSP_SCOPE_NAME);
     default:
@@ -120,8 +118,8 @@ export function groupByStage(vehicles: Vehicle[]): Record<Vehicle["stage"], Vehi
   const groups: Record<Vehicle["stage"], Vehicle[]> = {
     INVOICED: [],
     ALLOCATION_MATCHED: [],
-    FUNDING_PENDING: [],
-    FUNDING_RECEIVED: [],
+    DOCS_VERIFIED: [],
+    DISPATCH_READY: [],
     GATE_OUT: [],
     IN_TRANSIT: [],
     DELIVERED: [],
@@ -162,22 +160,32 @@ export function getPipelineFunnel(
   }));
 }
 
-/** Average hours from FUNDING_PENDING to FUNDING_RECEIVED, grouped by bank — the HQ funding-lag chart. */
-export function getAvgFundingLagByBank(
+/** Average hours spent on each leg of the goods flow — the HQ dwell chart. */
+export function getAvgDwellByStage(
   vehicles: Vehicle[]
-): { bankName: string; avgHours: number }[] {
-  const lagsByBank = new Map<string, number[]>();
-  for (const v of vehicles) {
-    const start = v.stageTimestamps.FUNDING_PENDING;
-    const end = v.stageTimestamps.FUNDING_RECEIVED;
-    if (!start || !end) continue;
-    const lag = hoursSince(start, end);
-    lagsByBank.set(v.bank.name, [...(lagsByBank.get(v.bank.name) ?? []), lag]);
-  }
-  return Array.from(lagsByBank.entries()).map(([bankName, lags]) => ({
-    bankName,
-    avgHours: Math.round(lags.reduce((sum, n) => sum + n, 0) / lags.length),
-  }));
+): { leg: string; avgHours: number }[] {
+  const legs: { leg: string; from: Stage; to: Stage }[] = [
+    { leg: "Invoice → allocation", from: "INVOICED", to: "ALLOCATION_MATCHED" },
+    { leg: "Allocation → docs", from: "ALLOCATION_MATCHED", to: "DOCS_VERIFIED" },
+    { leg: "Docs → papers", from: "DOCS_VERIFIED", to: "DISPATCH_READY" },
+    { leg: "Papers → gate-out", from: "DISPATCH_READY", to: "GATE_OUT" },
+    { leg: "Gate-out → delivery", from: "GATE_OUT", to: "DELIVERED" },
+  ];
+
+  return legs
+    .map(({ leg, from, to }) => {
+      const spans = vehicles
+        .filter((v) => v.stageTimestamps[from] && v.stageTimestamps[to])
+        .map((v) => hoursSince(v.stageTimestamps[from]!, v.stageTimestamps[to]!));
+      return {
+        leg,
+        avgHours:
+          spans.length === 0
+            ? 0
+            : Math.round(spans.reduce((sum, n) => sum + n, 0) / spans.length),
+      };
+    })
+    .filter((l) => l.avgHours > 0);
 }
 
 export interface KpiItem {
@@ -199,7 +207,8 @@ function average(nums: number[]): number | null {
  * VehicleStoreContext state.
  */
 export function getKpisFromVehicles(vehicles: Vehicle[], role: Role): KpiItem[] {
-  const stuckCount = vehicles.filter((v) => v.overall === "STUCK").length;
+  const blocked = vehicles.filter((v) => v.overall === "STUCK").length;
+  const slaBreaches = vehicles.filter((v) => worstOutcome(v) === "BREACHED").length;
 
   switch (role) {
     case "hq": {
@@ -208,47 +217,44 @@ export function getKpisFromVehicles(vehicles: Vehicle[], role: Role): KpiItem[] 
         .filter((v) => v.stageTimestamps.GATE_OUT)
         .map((v) => hoursSince(v.stageTimestamps.INVOICED!, v.stageTimestamps.GATE_OUT!));
       const avgGateOutHours = average(gateOutHours);
-      const delivered = vehicles.filter((v) => v.stage === "DELIVERED").length;
       return [
         { label: "Invoiced Today", value: invoicedToday },
-        { label: "Stuck", value: stuckCount, tone: stuckCount > 0 ? "stuck" : "clear" },
+        { label: "Blocked", value: blocked, tone: blocked > 0 ? "stuck" : "clear" },
         {
           label: "Avg Invoice → Gate-out",
           value: avgGateOutHours !== null ? `${avgGateOutHours}h` : "—",
         },
-        { label: "Delivered", value: delivered, tone: "clear" },
+        {
+          label: "SLA Breaches",
+          value: slaBreaches,
+          tone: slaBreaches > 0 ? "stuck" : "clear",
+        },
       ];
     }
     case "plant": {
       const readyForGatePass = vehicles.filter(
-        (v) => v.overall === "CLEAR" && v.stage === "FUNDING_RECEIVED"
+        (v) => v.overall === "CLEAR" && v.stage === "DOCS_VERIFIED"
       ).length;
-      const substitutions = vehicles.filter(isSubstitutionCase).length;
+      const papersRaised = vehicles.filter((v) => v.stage === "DISPATCH_READY").length;
       return [
-        { label: "Awaiting Gate Pass", value: vehicles.length },
-        { label: "Blocked", value: stuckCount, tone: stuckCount > 0 ? "stuck" : "clear" },
+        { label: "In the Yard", value: vehicles.length },
+        { label: "Blocked", value: blocked, tone: blocked > 0 ? "stuck" : "clear" },
         { label: "Ready for Gate Pass", value: readyForGatePass, tone: "clear" },
         {
-          label: "Substitutions",
-          value: substitutions,
-          tone: substitutions > 0 ? "pending" : "neutral",
+          label: "Papers Raised",
+          value: papersRaised,
+          tone: papersRaised > 0 ? "pending" : "neutral",
         },
       ];
     }
     case "ro": {
       const dealerCount = new Set(vehicles.map((v) => v.dealerCode)).size;
-      const slaBreaches = vehicles.filter(
-        (v) =>
-          v.stage === "FUNDING_PENDING" &&
-          v.stageTimestamps.FUNDING_PENDING &&
-          hoursSince(v.stageTimestamps.FUNDING_PENDING, DEMO_NOW) > 72
-      ).length;
       return [
         { label: "Total Cars", value: vehicles.length },
-        { label: "Stuck", value: stuckCount, tone: stuckCount > 0 ? "stuck" : "clear" },
+        { label: "Blocked", value: blocked, tone: blocked > 0 ? "stuck" : "clear" },
         { label: "Dealers", value: dealerCount },
         {
-          label: "SLA Breaches (>72h)",
+          label: "SLA Breaches",
           value: slaBreaches,
           tone: slaBreaches > 0 ? "stuck" : "clear",
         },
@@ -260,20 +266,9 @@ export function getKpisFromVehicles(vehicles: Vehicle[], role: Role): KpiItem[] 
       const delivered = vehicles.filter((v) => v.stage === "DELIVERED").length;
       return [
         { label: "Cars on Order", value: onOrder },
-        { label: "Stuck", value: stuckCount, tone: stuckCount > 0 ? "stuck" : "clear" },
+        { label: "Blocked", value: blocked, tone: blocked > 0 ? "stuck" : "clear" },
         { label: "Arriving This Week", value: arrivingThisWeek },
         { label: "Delivered", value: delivered, tone: "clear" },
-      ];
-    }
-    case "bank": {
-      const pending = vehicles.filter((v) => v.bank.status === "PENDING").length;
-      const received = vehicles.filter((v) => v.bank.status === "RECEIVED").length;
-      const mismatch = vehicles.filter((v) => v.bank.status === "MISMATCH").length;
-      return [
-        { label: "Funding Requests", value: vehicles.length },
-        { label: "Pending", value: pending, tone: pending > 0 ? "pending" : "neutral" },
-        { label: "Received", value: received, tone: "clear" },
-        { label: "Mismatch", value: mismatch, tone: mismatch > 0 ? "stuck" : "clear" },
       ];
     }
     case "lsp": {
@@ -299,13 +294,6 @@ export function getKpisForRole(role: Role): KpiItem[] {
   return getKpisFromVehicles(getVehiclesForRole(role), role);
 }
 
-/** Unit-sanity: run once at import time in dev to catch role-scoping regressions early. */
-if (process.env.NODE_ENV !== "production") {
-  const counts = (["hq", "plant", "ro", "dealer", "bank", "lsp"] as Role[]).map(
-    (role) => `${role}=${getVehiclesForRole(role).length}`
-  );
-  console.log(`[selectors] vehicle counts per role → ${counts.join(", ")}`);
-}
 
 /** Deterministic time-of-day word, derived from the fixed demo clock — never the real one. */
 export function getGreetingWord(): string {
@@ -321,39 +309,29 @@ export function getGreetingWord(): string {
  */
 export function getPersonaHeadline(vehicles: Vehicle[], role: Role): string {
   const total = vehicles.length;
-  const stuck = vehicles.filter((v) => v.overall === "STUCK").length;
+  const blocked = vehicles.filter((v) => v.overall === "STUCK").length;
+  const breaches = vehicles.filter((v) => worstOutcome(v) === "BREACHED").length;
 
   switch (role) {
     case "hq": {
       const dealers = new Set(vehicles.filter((v) => v.overall === "STUCK").map((v) => v.dealerCode))
         .size;
-      return stuck === 0
-        ? `All ${total} cars in the national pipeline are clear.`
-        : `${stuck} of ${total} cars are stuck, across ${dealers} dealer${dealers === 1 ? "" : "s"}.`;
+      return blocked === 0
+        ? `All ${total} cars in the national pipeline are moving.`
+        : `${blocked} of ${total} cars are held on paperwork, across ${dealers} dealer${dealers === 1 ? "" : "s"}.`;
     }
     case "plant": {
       const ready = vehicles.filter(
-        (v) => v.overall === "CLEAR" && v.stage === "FUNDING_RECEIVED"
+        (v) => v.overall === "CLEAR" && v.stage === "DOCS_VERIFIED"
       ).length;
-      return `${ready} car${ready === 1 ? "" : "s"} clear for gate pass today, ${stuck} blocked on document mismatches.`;
+      return `${ready} car${ready === 1 ? "" : "s"} clear for a gate pass today, ${blocked} held on a document mismatch.`;
     }
     case "ro": {
-      const breaches = vehicles.filter(
-        (v) =>
-          v.stage === "FUNDING_PENDING" &&
-          v.stageTimestamps.FUNDING_PENDING &&
-          hoursSince(v.stageTimestamps.FUNDING_PENDING, DEMO_NOW) > 72
-      ).length;
-      return `${stuck} of ${total} cars in your region are stuck — ${breaches} past the 72-hour funding SLA.`;
+      return `${blocked} of ${total} cars in your region are held up — ${breaches} past their promised turnaround.`;
     }
     case "dealer": {
       const arriving = vehicles.filter((v) => v.stage === "IN_TRANSIT").length;
-      return `${stuck} of your ${total} cars are at risk — ${arriving} more arriving this week.`;
-    }
-    case "bank": {
-      const pending = vehicles.filter((v) => v.bank.status === "PENDING").length;
-      const mismatch = vehicles.filter((v) => v.bank.status === "MISMATCH").length;
-      return `${pending} funding request${pending === 1 ? "" : "s"} still open, ${mismatch} flagged for a chassis mismatch.`;
+      return `${blocked} of your ${total} cars are held on paperwork — ${arriving} more arriving this week.`;
     }
     case "lsp": {
       const inTransit = vehicles.filter((v) => v.stage === "IN_TRANSIT").length;
@@ -367,24 +345,6 @@ export function getPersonaHeadline(vehicles: Vehicle[], role: Role): string {
   }
 }
 
-/**
- * Trips a role may watch: a trip is in scope only if at least one car aboard is
- * in scope. The dealer therefore sees its own run and nothing else, while the
- * LSP sees every trip it is carrying — same rule as every other data read here.
- */
-export function getTripsForRole(vehicles: Vehicle[], role: Role): Trip[] {
-  const visible = new Set(filterVehiclesForRole(vehicles, role).map((v) => v.vin));
-  return TRIPS.filter((trip) => trip.vins.some((vin) => visible.has(vin)));
-}
-
-/** The in-scope cars aboard a trip — never the raw trip.vins list. */
-export function getTripVehicles(vehicles: Vehicle[], role: Role, trip: Trip): Vehicle[] {
-  const scoped = filterVehiclesForRole(vehicles, role);
-  return trip.vins
-    .map((vin) => scoped.find((v) => v.vin === vin))
-    .filter((v): v is Vehicle => Boolean(v));
-}
-
 /* ---------------------------------------------------------------------------
  * ERP + document scoping — same choke-point rule as the vehicle reads above
  * ------------------------------------------------------------------------ */
@@ -392,7 +352,7 @@ export function getTripVehicles(vehicles: Vehicle[], role: Role, trip: Trip): Ve
 /**
  * Orders a role may see: the dealer sees only its own book, the RO its region,
  * the manufacturer everything, and the plant only what has actually been
- * committed to it. The bank and the transporter have no business in the order
+ * committed to it. The transporter has no business in the order
  * book at all.
  */
 export function getOrdersForRole(orders: Order[], role: Role): Order[] {
@@ -472,4 +432,35 @@ export function getAlertsForVehicle(
   vin: string
 ): ComplianceFinding[] {
   return getAlertsForRole(vehicles, documents, role).filter((f) => f.vin === vin);
+}
+
+/** The SLA scoreboard as one role sees it. */
+export function getSlaReportForRole(vehicles: Vehicle[], role: Role): SlaReport {
+  return buildSlaReport(filterVehiclesForRole(vehicles, role));
+}
+
+/**
+ * Trips a role may watch: a trip is in scope only if at least one car aboard is
+ * in scope. The dealer therefore sees its own run and nothing else, while the
+ * manufacturer, the RO and the transporter see every trip touching their slice.
+ */
+export function getTripsForRole(vehicles: Vehicle[], role: Role): Trip[] {
+  const visible = new Set(filterVehiclesForRole(vehicles, role).map((v) => v.vin));
+  return TRIPS.filter((trip) => trip.vins.some((vin) => visible.has(vin)));
+}
+
+/** The in-scope cars aboard a trip — never the raw trip.vins list. */
+export function getTripVehicles(vehicles: Vehicle[], role: Role, trip: Trip): Vehicle[] {
+  const scoped = filterVehiclesForRole(vehicles, role);
+  return trip.vins
+    .map((vin) => scoped.find((v) => v.vin === vin))
+    .filter((v): v is Vehicle => Boolean(v));
+}
+
+/** Unit-sanity: run once at import time in dev to catch role-scoping regressions early. */
+if (process.env.NODE_ENV !== "production") {
+  const counts = (["hq", "plant", "ro", "dealer", "lsp"] as Role[]).map(
+    (role) => `${role}=${getVehiclesForRole(role).length}`
+  );
+  console.log(`[selectors] vehicle counts per role → ${counts.join(", ")}`);
 }

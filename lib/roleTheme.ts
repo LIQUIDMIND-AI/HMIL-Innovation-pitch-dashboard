@@ -10,7 +10,6 @@ export const ROLE_HUES: Record<Role, string> = {
   plant: "#6a5a72",
   ro: "#6e6357",
   dealer: "#33607f",
-  bank: "#8a6a3d",
   lsp: "#8a5a66",
 };
 

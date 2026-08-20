@@ -8,16 +8,16 @@ const CHECK_LABELS: Record<keyof VehicleChecks, string> = {
   chassisMatch: "Chassis Match",
   variantColourMatch: "Variant & Colour Match",
   priceMatch: "Price Match",
-  fundingPresent: "Funding Present",
   taxTotalsMatch: "Tax Totals Match",
+  dispatchDocsPresent: "Dispatch Papers",
 };
 
 const CHECK_ORDER: (keyof VehicleChecks)[] = [
   "chassisMatch",
   "variantColourMatch",
   "priceMatch",
-  "fundingPresent",
   "taxTotalsMatch",
+  "dispatchDocsPresent",
 ];
 
 const TONE_CLASSES: Record<CheckStatus, string> = {
@@ -32,7 +32,7 @@ function CheckIcon({ status }: { status: CheckStatus }) {
   return <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />;
 }
 
-/** Re-runs a brief staggered "resolve" animation whenever the check verdicts change (e.g. after funding is confirmed). */
+/** Re-runs a brief staggered "resolve" animation whenever the check verdicts change (e.g. once the plant raises the dispatch papers). */
 export default function CheckRail({ checks }: { checks: VehicleChecks }) {
   const prevRef = useRef(checks);
   const [justUpdated, setJustUpdated] = useState(false);

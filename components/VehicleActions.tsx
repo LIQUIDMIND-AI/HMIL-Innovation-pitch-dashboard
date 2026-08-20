@@ -16,7 +16,7 @@ function AddNoteControl({
   authorRole,
 }: {
   vin: string;
-  authorRole: "hq" | "ro";
+  authorRole: "hq" | "ro" | "dealer";
 }) {
   const { persona } = useAuth();
   const { addNote } = useVehicleStore();
@@ -77,8 +77,14 @@ function AddNoteControl({
 
 export default function VehicleActions({ vehicle }: { vehicle: Vehicle }) {
   const { role, persona } = useAuth();
-  const { receiveFunding, issueGatePass, updateLspMilestone, addNote, reassignCarrier } =
-    useVehicleStore();
+  const {
+    verifyDocuments,
+    raiseDispatchPapers,
+    issueGatePass,
+    updateLspMilestone,
+    addNote,
+    reassignCarrier,
+  } = useVehicleStore();
 
   if (!role || !persona) return null;
 
@@ -120,27 +126,51 @@ export default function VehicleActions({ vehicle }: { vehicle: Vehicle }) {
       );
 
     case "plant": {
-      const failingCount = Object.values(vehicle.checks).filter((s) => s !== "CLEAR").length;
-      const atFundingReceived = vehicle.stage === "FUNDING_RECEIVED";
-      const canIssueGatePass = failingCount === 0 && atFundingReceived;
-      const tooltip =
-        failingCount > 0
-          ? `${failingCount} of 5 checks failing`
-          : !atFundingReceived
-            ? "Awaiting funding confirmation"
-            : undefined;
+      const failing = Object.entries(vehicle.checks).filter(([, v]) => v === "MISMATCH");
+      const canVerify = vehicle.stage === "ALLOCATION_MATCHED" && failing.length === 0;
+      const canRaisePapers = vehicle.stage === "DOCS_VERIFIED";
+      const canIssueGatePass = vehicle.stage === "DISPATCH_READY" && failing.length === 0;
+      const blockedNote =
+        failing.length > 0
+          ? `${failing.length} of 5 checks failing`
+          : vehicle.stage === "ALLOCATION_MATCHED"
+            ? "Cross-check the documents to clear this car"
+            : vehicle.stage === "DOCS_VERIFIED"
+              ? "Raise the e-way bill and challan to release the gate pass"
+              : undefined;
+
       return (
-        <div className="flex flex-col gap-1.5">
-          <button
-            type="button"
-            disabled={!canIssueGatePass}
-            title={tooltip}
-            className={`${PRIMARY_BTN} self-start`}
-            onClick={() => issueGatePass(vehicle.vin)}
-          >
-            Issue Gate Pass
-          </button>
-          {tooltip && <p className="text-xs text-ink-muted">{tooltip}</p>}
+        <div className="flex flex-col items-start gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={!canVerify}
+              title={!canVerify ? blockedNote : undefined}
+              className={SECONDARY_BTN}
+              onClick={() => verifyDocuments(vehicle.vin)}
+            >
+              Verify Documents
+            </button>
+            <button
+              type="button"
+              disabled={!canRaisePapers}
+              title={!canRaisePapers ? "Available once every check is clear" : undefined}
+              className={SECONDARY_BTN}
+              onClick={() => raiseDispatchPapers(vehicle.vin)}
+            >
+              Raise Dispatch Papers
+            </button>
+            <button
+              type="button"
+              disabled={!canIssueGatePass}
+              title={!canIssueGatePass ? blockedNote : undefined}
+              className={PRIMARY_BTN}
+              onClick={() => issueGatePass(vehicle.vin)}
+            >
+              Issue Gate Pass
+            </button>
+          </div>
+          {blockedNote && <p className="text-xs text-ink-muted">{blockedNote}</p>}
         </div>
       );
     }
@@ -167,29 +197,14 @@ export default function VehicleActions({ vehicle }: { vehicle: Vehicle }) {
       );
 
     case "dealer": {
-      const canConfirmFunding =
-        vehicle.bank.status === "PENDING" && vehicle.stage === "FUNDING_PENDING";
       const canAcknowledgeDelivery = vehicle.stage === "DELIVERED";
       return (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            disabled={!canConfirmFunding}
-            title={
-              !canConfirmFunding
-                ? "Available once a routine funding confirmation is pending"
-                : undefined
-            }
-            className={PRIMARY_BTN}
-            onClick={() => receiveFunding(vehicle.vin)}
-          >
-            Confirm Funding Received
-          </button>
-          <button
-            type="button"
             disabled={!canAcknowledgeDelivery}
             title={!canAcknowledgeDelivery ? "Available once the vehicle is delivered" : undefined}
-            className={SECONDARY_BTN}
+            className={PRIMARY_BTN}
             onClick={() =>
               addNote(vehicle.vin, {
                 author: persona.name,
@@ -200,26 +215,7 @@ export default function VehicleActions({ vehicle }: { vehicle: Vehicle }) {
           >
             Acknowledge Delivery (POD)
           </button>
-        </div>
-      );
-    }
-
-    case "bank": {
-      const canRelease = vehicle.bank.status === "PENDING" && vehicle.stage === "FUNDING_PENDING";
-      return (
-        <div className="flex flex-col gap-1.5">
-          <button
-            type="button"
-            disabled={!canRelease}
-            title={!canRelease ? "No pending funding request for this chassis" : undefined}
-            className={`${PRIMARY_BTN} self-start`}
-            onClick={() => receiveFunding(vehicle.vin)}
-          >
-            Mark Funding Released
-          </button>
-          <p className="text-xs text-ink-muted">
-            Confirms funding receipt for the dealer and updates DhanFlow instantly.
-          </p>
+          <AddNoteControl vin={vehicle.vin} authorRole="dealer" />
         </div>
       );
     }

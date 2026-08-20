@@ -3,10 +3,10 @@
 import RoleGate from "@/components/RoleGate";
 import ComplianceScreen from "@/components/ComplianceScreen";
 
-export default function DealerCompliancePage() {
+export default function PlantCompliancePage() {
   return (
-    <RoleGate role="dealer">
-      <ComplianceScreen role="dealer" />
+    <RoleGate role="plant">
+      <ComplianceScreen role="plant" />
     </RoleGate>
   );
 }

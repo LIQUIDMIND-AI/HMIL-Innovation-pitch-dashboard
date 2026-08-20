@@ -29,7 +29,7 @@ export interface Persona {
   password: string;
 }
 
-/** The 6 hardcoded demo accounts. Credentials are shown on the login screen itself — this is a demo. */
+/** The 5 hardcoded demo accounts. Credentials are shown on the login screen itself — this is a demo. */
 export const PERSONAS: Persona[] = [
   {
     role: "hq",
@@ -77,18 +77,6 @@ export const PERSONAS: Persona[] = [
     location: "Chandigarh",
     question: "How many of my cars are at risk?",
     username: "dealer",
-    password: "demo",
-  },
-  {
-    role: "bank",
-    name: "Meera Nair",
-    initials: "MN",
-    title: "Dealer Finance Desk",
-    label: "Bank",
-    org: "HDFC Bank",
-    location: "Mumbai",
-    question: "Which funding requests are still open?",
-    username: "bank",
     password: "demo",
   },
   {

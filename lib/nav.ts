@@ -4,10 +4,8 @@ import {
   AlertTriangle,
   Building2,
   ClipboardList,
-  FileText,
   ShieldCheck,
   Truck,
-  Landmark,
   MapPin,
   type LucideIcon,
 } from "lucide-react";
@@ -31,6 +29,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
   plant: [
     { label: "Overview", href: "/plant", icon: LayoutDashboard },
     { label: "Gate-out Queue", href: "/plant/queue", icon: Truck },
+    { label: "Compliance", href: "/plant/compliance", icon: ShieldCheck },
     { label: "Exceptions", href: "/plant/exceptions", icon: AlertTriangle },
   ],
   ro: [
@@ -38,6 +37,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: "Dealer Rollup", href: "/ro/dealers", icon: Building2 },
     { label: "Pipeline", href: "/ro/pipeline", icon: GitBranch },
     { label: "Tracking", href: "/ro/tracking", icon: MapPin },
+    { label: "Compliance", href: "/ro/compliance", icon: ShieldCheck },
     { label: "Exceptions", href: "/ro/exceptions", icon: AlertTriangle },
   ],
   dealer: [
@@ -47,11 +47,6 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: "Tracking", href: "/dealer/tracking", icon: MapPin },
     { label: "Compliance", href: "/dealer/compliance", icon: ShieldCheck },
     { label: "Exceptions", href: "/dealer/exceptions", icon: AlertTriangle },
-  ],
-  bank: [
-    { label: "Overview", href: "/bank", icon: LayoutDashboard },
-    { label: "Funding Requests", href: "/bank/funding", icon: Landmark },
-    { label: "Documents Issued", href: "/bank/documents", icon: FileText },
   ],
   lsp: [
     { label: "Overview", href: "/lsp", icon: LayoutDashboard },

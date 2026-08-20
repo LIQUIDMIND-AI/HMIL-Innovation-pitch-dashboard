@@ -17,6 +17,7 @@ import StatusChip from "@/components/StatusChip";
 import CheckRail from "@/components/CheckRail";
 import DocCompare from "@/components/DocCompare";
 import JourneyRail from "@/components/JourneyRail";
+import VehicleSlaStrip from "@/components/VehicleSlaStrip";
 import DocumentList from "@/components/DocumentList";
 import ComplianceAlerts from "@/components/ComplianceAlerts";
 import NotesThread from "@/components/NotesThread";
@@ -107,6 +108,13 @@ export default function VehiclePage() {
           <JourneyRail vehicle={vehicle} size="full" showTimestamps />
         </div>
 
+        <div className="mt-6 border-t border-border pt-4">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
+            Service levels on this car
+          </p>
+          <VehicleSlaStrip vehicle={vehicle} />
+        </div>
+
         {vehicle.stuckReason && (
           <p
             className={`mt-6 rounded-lg border px-3 py-2.5 text-sm ${
@@ -130,7 +138,7 @@ export default function VehiclePage() {
       {showDocCompare && (
         <section aria-labelledby="doc-heading">
           <h3 id="doc-heading" className="mb-2 text-sm font-semibold text-ink">
-            Invoice vs Funding Confirmation
+            Invoice vs Dispatch Papers
           </h3>
           <DocCompare vehicle={vehicle} />
         </section>

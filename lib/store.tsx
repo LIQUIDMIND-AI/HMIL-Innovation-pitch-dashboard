@@ -8,15 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  DEALERS,
-  DEMO_NOW,
-  DOCUMENTS,
-  ORDERS,
-  VEHICLES,
-  bankForDealer,
-  makeDoc,
-} from "./mockData";
+import { DEALERS, DEMO_NOW, DOCUMENTS, ORDERS, VEHICLES, makeDoc } from "./mockData";
 import { computeAtp, findAvailability } from "./erp";
 import type {
   AtpPlan,
@@ -64,8 +56,11 @@ interface VehicleStoreContextValue {
   vehicles: Vehicle[];
   orders: Order[];
   documents: ComplianceDoc[];
-  /** Dealer confirms / bank marks-released — same underlying event, two entry points. */
-  receiveFunding: (vin: string) => void;
+  /** Plant clears the cross-document checks on a car. */
+  verifyDocuments: (vin: string) => void;
+  /** Plant raises the e-way bill + delivery challan. `chassisOnDocs` exists so the
+   *  mis-key that strands a car can be demonstrated live. */
+  raiseDispatchPapers: (vin: string, chassisOnDocs?: string) => void;
   issueGatePass: (vin: string) => void;
   updateLspMilestone: (vin: string, milestone: LspMilestone) => void;
   addNote: (vin: string, note: Omit<Note, "at">) => void;
@@ -77,8 +72,6 @@ interface VehicleStoreContextValue {
   rejectOrder: (orderId: string, reason: string, verifiedBy: string) => void;
   /** Raises the dummy invoice(s) for a verified order and puts the cars on the pipeline. */
   raiseInvoiceForOrder: (orderId: string) => string[];
-  /** Bank issues its confirmation; the document lands on the manufacturer's and the dealer's copy at once. */
-  issueFundingConfirmation: (vin: string, input: { chassis: string; amount: number }) => void;
 }
 
 const VehicleStoreContext = createContext<VehicleStoreContextValue | undefined>(undefined);
@@ -111,38 +104,108 @@ export function VehicleStoreProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>(ORDERS);
   const [documents, setDocuments] = useState<ComplianceDoc[]>(DOCUMENTS);
 
-  const receiveFunding = useCallback((vin: string) => {
+  const verifyDocuments = useCallback((vin: string) => {
     setVehicles((prev) =>
       updateVehicle(prev, vin, (v) => {
-        if (v.bank.status !== "PENDING" || v.stage !== "FUNDING_PENDING") return v;
-        const checks = { ...v.checks, chassisMatch: "CLEAR" as const, fundingPresent: "CLEAR" as const };
-        const overall = Object.values(checks).every((s) => s === "CLEAR")
-          ? ("CLEAR" as const)
-          : ("STUCK" as const);
+        if (v.stage !== "ALLOCATION_MATCHED") return v;
+        const contentChecks = [
+          v.checks.chassisMatch,
+          v.checks.variantColourMatch,
+          v.checks.priceMatch,
+          v.checks.taxTotalsMatch,
+        ];
+        if (contentChecks.some((c) => c === "MISMATCH")) return v;
+        const checks = {
+          ...v.checks,
+          chassisMatch: "CLEAR" as const,
+          variantColourMatch: "CLEAR" as const,
+          priceMatch: "CLEAR" as const,
+          taxTotalsMatch: "CLEAR" as const,
+        };
         return {
           ...v,
-          bank: {
-            ...v.bank,
-            status: "RECEIVED",
-            chassisOnConfirmation: v.chassisShort,
-            amount: v.invoice.amount,
-            receivedAt: DEMO_NOW,
-          },
           checks,
-          overall,
-          stuckReason: overall === "CLEAR" ? undefined : v.stuckReason,
-          stage: "FUNDING_RECEIVED",
-          stageTimestamps: { ...v.stageTimestamps, FUNDING_RECEIVED: DEMO_NOW },
+          overall: "CLEAR" as const,
+          stuckReason: undefined,
+          stage: "DOCS_VERIFIED" as const,
+          stageTimestamps: { ...v.stageTimestamps, DOCS_VERIFIED: DEMO_NOW },
         };
       })
     );
   }, []);
 
+  /**
+   * Raising the dispatch papers is the moment the goods flow and the document
+   * flow meet: the e-way bill and challan go onto the shared record, and the
+   * compliance rules immediately re-run against them.
+   */
+  const raiseDispatchPapers = useCallback((vin: string, chassisOnDocs?: string) => {
+    setVehicles((prev) =>
+      updateVehicle(prev, vin, (v) => {
+        if (v.stage !== "DOCS_VERIFIED") return v;
+        const onDocs = (chassisOnDocs ?? v.chassisShort).trim() || v.chassisShort;
+        const matches = onDocs === v.chassisShort;
+        const checks = {
+          ...v.checks,
+          chassisMatch: matches ? ("CLEAR" as const) : ("MISMATCH" as const),
+          dispatchDocsPresent: matches ? ("CLEAR" as const) : ("MISMATCH" as const),
+        };
+        return {
+          ...v,
+          dispatch: {
+            status: matches ? ("RAISED" as const) : ("MISMATCH" as const),
+            ewbNo: `EWB-${onDocs}-8841`,
+            challanNo: `DC-${onDocs}-2026`,
+            chassisOnDocs: onDocs,
+            validTill: "2026-08-25",
+            raisedAt: DEMO_NOW,
+          },
+          checks,
+          overall: matches ? ("CLEAR" as const) : ("STUCK" as const),
+          stuckReason: matches
+            ? undefined
+            : `Dispatch papers were raised against chassis ${onDocs}; the invoice is for ${v.chassisShort} — the gate pass stays blocked until the e-way bill and the invoice agree.`,
+          stage: matches ? ("DISPATCH_READY" as const) : v.stage,
+          stageTimestamps: matches
+            ? { ...v.stageTimestamps, DISPATCH_READY: DEMO_NOW }
+            : v.stageTimestamps,
+        };
+      })
+    );
+
+    setDocuments((prev) => {
+      const vehicle = vehicles.find((v) => v.vin === vin);
+      if (!vehicle) return prev;
+      const onDocs = (chassisOnDocs ?? vehicle.chassisShort).trim() || vehicle.chassisShort;
+      const rest = prev.filter(
+        (d) => !(d.vin === vin && (d.kind === "EWAY_BILL" || d.kind === "DELIVERY_CHALLAN"))
+      );
+      return [
+        ...rest,
+        makeDoc(vin, "EWAY_BILL", `EWB-${onDocs}-8841`, DEMO_NOW, {
+          ewbNo: `EWB-${onDocs}-8841`,
+          chassis: onDocs,
+          truckNo: vehicle.lsp?.truckNo ?? "—",
+          from: "Sriperumbudur (TN)",
+          to: vehicle.region,
+          validTill: "2026-08-25",
+        }),
+        makeDoc(vin, "DELIVERY_CHALLAN", `DC-${onDocs}-2026`, DEMO_NOW, {
+          challanNo: `DC-${onDocs}-2026`,
+          chassis: onDocs,
+          dealerCode: vehicle.dealerCode,
+          dealerName: vehicle.dealerName,
+          truckNo: vehicle.lsp?.truckNo ?? "—",
+        }),
+      ];
+    });
+  }, [vehicles]);
+
   const issueGatePass = useCallback((vin: string) => {
     setVehicles((prev) =>
       updateVehicle(prev, vin, (v) => {
-        const allClear = Object.values(v.checks).every((s) => s === "CLEAR");
-        if (!allClear || v.stage !== "FUNDING_RECEIVED") return v;
+        const allClear = Object.values(v.checks).every((s) => s !== "MISMATCH");
+        if (!allClear || v.stage !== "DISPATCH_READY") return v;
         return {
           ...v,
           stage: "GATE_OUT",
@@ -152,20 +215,39 @@ export function VehicleStoreProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const updateLspMilestone = useCallback((vin: string, milestone: LspMilestone) => {
-    setVehicles((prev) =>
-      updateVehicle(prev, vin, (v) => {
-        if (!v.lsp) return v;
-        const nextStage = milestone === "Delivered to Dealer" ? "DELIVERED" : "IN_TRANSIT";
-        return {
-          ...v,
-          lsp: { ...v.lsp, lastMilestone: MILESTONE_TEXT[milestone] },
-          stage: nextStage,
-          stageTimestamps: { ...v.stageTimestamps, [nextStage]: DEMO_NOW },
-        };
-      })
-    );
-  }, []);
+  const updateLspMilestone = useCallback(
+    (vin: string, milestone: LspMilestone) => {
+      setVehicles((prev) =>
+        updateVehicle(prev, vin, (v) => {
+          if (!v.lsp) return v;
+          const nextStage = milestone === "Delivered to Dealer" ? "DELIVERED" : "IN_TRANSIT";
+          return {
+            ...v,
+            lsp: { ...v.lsp, lastMilestone: MILESTONE_TEXT[milestone] },
+            stage: nextStage,
+            stageTimestamps: { ...v.stageTimestamps, [nextStage]: DEMO_NOW },
+          };
+        })
+      );
+
+      // Delivery closes the document loop: the POD lands on the shared record.
+      if (milestone !== "Delivered to Dealer") return;
+      setDocuments((prev) => {
+        const vehicle = vehicles.find((v) => v.vin === vin);
+        if (!vehicle || prev.some((d) => d.vin === vin && d.kind === "POD")) return prev;
+        return [
+          ...prev,
+          makeDoc(vin, "POD", `POD-${vehicle.chassisShort}`, DEMO_NOW, {
+            chassis: vehicle.chassisShort,
+            receivedBy: vehicle.dealerName,
+            at: DEMO_NOW,
+            condition: "No transit damage reported",
+          }),
+        ];
+      });
+    },
+    [vehicles]
+  );
 
   const addNote = useCallback((vin: string, note: Omit<Note, "at">) => {
     setVehicles((prev) =>
@@ -281,13 +363,13 @@ export function VehicleStoreProvider({ children }: { children: ReactNode }) {
           },
           allocationRef,
           priceCircularRef: "PC-2026-08-01",
-          bank: { name: bankForDealer(order.dealerCode), status: "PENDING" },
+          dispatch: { status: "NOT_RAISED" },
           checks: {
-            chassisMatch: "PENDING",
+            chassisMatch: "CLEAR",
             variantColourMatch: "CLEAR",
             priceMatch: "CLEAR",
-            fundingPresent: "PENDING",
             taxTotalsMatch: "CLEAR",
+            dispatchDocsPresent: "PENDING",
           },
           overall: "CLEAR",
           stage: "INVOICED",
@@ -349,67 +431,13 @@ export function VehicleStoreProvider({ children }: { children: ReactNode }) {
     [orders]
   );
 
-  /**
-   * The bank issues once. The confirmation is not emailed anywhere — it lands on
-   * the shared record, where the manufacturer, the plant, the RO and the dealer
-   * all read the same copy, and the compliance rules re-run against it.
-   */
-  const issueFundingConfirmation = useCallback(
-    (vin: string, input: { chassis: string; amount: number }) => {
-      const vehicle = vehicles.find((v) => v.vin === vin);
-      if (!vehicle) return;
-      const matches = input.chassis === vehicle.chassisShort;
-
-      setVehicles((prev) =>
-        updateVehicle(prev, vin, (v) => {
-          const checks = {
-            ...v.checks,
-            chassisMatch: matches ? ("CLEAR" as const) : ("MISMATCH" as const),
-            fundingPresent: "CLEAR" as const,
-          };
-          const overall = Object.values(checks).every((c) => c === "CLEAR")
-            ? ("CLEAR" as const)
-            : ("STUCK" as const);
-          return {
-            ...v,
-            bank: {
-              ...v.bank,
-              status: matches ? "RECEIVED" : "MISMATCH",
-              chassisOnConfirmation: input.chassis,
-              amount: input.amount,
-              receivedAt: DEMO_NOW,
-            },
-            checks,
-            overall,
-            stuckReason: matches
-              ? undefined
-              : `Bank funding confirmation cites chassis ${input.chassis}, invoice says ${v.chassisShort} — gate pass blocked until chassis numbers match.`,
-            stage: "FUNDING_RECEIVED",
-            stageTimestamps: { ...v.stageTimestamps, FUNDING_RECEIVED: DEMO_NOW },
-          };
-        })
-      );
-
-      setDocuments((prev) => [
-        ...prev.filter((d) => !(d.vin === vin && d.kind === "FUNDING_CONFIRMATION")),
-        makeDoc(vin, "FUNDING_CONFIRMATION", `FC-${input.chassis}-2026`, DEMO_NOW, {
-          bank: vehicle.bank.name,
-          chassis: input.chassis,
-          amount: String(input.amount),
-          receivedAt: DEMO_NOW,
-          dealerCode: vehicle.dealerCode,
-        }),
-      ]);
-    },
-    [vehicles]
-  );
-
   const value = useMemo<VehicleStoreContextValue>(
     () => ({
       vehicles,
       orders,
       documents,
-      receiveFunding,
+      verifyDocuments,
+      raiseDispatchPapers,
       issueGatePass,
       updateLspMilestone,
       addNote,
@@ -418,13 +446,13 @@ export function VehicleStoreProvider({ children }: { children: ReactNode }) {
       verifyOrder,
       rejectOrder,
       raiseInvoiceForOrder,
-      issueFundingConfirmation,
     }),
     [
       vehicles,
       orders,
       documents,
-      receiveFunding,
+      verifyDocuments,
+      raiseDispatchPapers,
       issueGatePass,
       updateLspMilestone,
       addNote,
@@ -433,7 +461,6 @@ export function VehicleStoreProvider({ children }: { children: ReactNode }) {
       verifyOrder,
       rejectOrder,
       raiseInvoiceForOrder,
-      issueFundingConfirmation,
     ]
   );
 

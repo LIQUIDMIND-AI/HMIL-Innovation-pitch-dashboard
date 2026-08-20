@@ -17,15 +17,15 @@ export interface Rule {
 export const RULES: Rule[] = [
   {
     id: "R01",
-    title: "Chassis on funding confirmation matches the invoice",
+    title: "Chassis on the e-way bill matches the invoice",
     severity: "CRITICAL",
-    intent: "A transposed digit strands the car at the plant with the money already released.",
+    intent: "A transposed digit on the dispatch papers strands the car at the gate — or moves the wrong one.",
   },
   {
     id: "R02",
-    title: "Funded amount matches the invoice total",
+    title: "Chassis on the delivery challan matches the invoice",
     severity: "CRITICAL",
-    intent: "A short-paid confirmation leaves the dealer under-funded against a full invoice.",
+    intent: "The challan is what the dealer signs against; a wrong chassis breaks the delivery trail.",
   },
   {
     id: "R03",
@@ -47,9 +47,9 @@ export const RULES: Rule[] = [
   },
   {
     id: "R06",
-    title: "Funding confirmation exists before gate-out",
+    title: "E-way bill is still valid on the dispatch date",
     severity: "CRITICAL",
-    intent: "No car should leave the plant against an unfunded invoice.",
+    intent: "An expired e-way bill is a detained truck and a penalty, discovered at a state border.",
   },
   {
     id: "R07",
@@ -104,12 +104,12 @@ function finding(
 }
 
 /** The circular that should be in force on a given invoice date. */
-export function expectedCircularFor(invoiceDate: string): string {
-  return `PC-${invoiceDate.slice(0, 7)}-01`;
-}
-
 function inr(value: string | number): string {
   return `₹${Number(value).toLocaleString("en-IN")}`;
+}
+
+export function expectedCircularFor(invoiceDate: string): string {
+  return `PC-${invoiceDate.slice(0, 7)}-01`;
 }
 
 /**
@@ -129,7 +129,6 @@ export function validateVehicle(
   const canSee = (kind: DocKind) => !visibleKinds || visibleKinds.has(kind);
   const out: ComplianceFinding[] = [];
   const invoice = docOf(docs, "INVOICE");
-  const funding = docOf(docs, "FUNDING_CONFIRMATION");
   const allocation = docOf(docs, "ALLOCATION");
   const challan = docOf(docs, "DELIVERY_CHALLAN");
   const eway = docOf(docs, "EWAY_BILL");
@@ -138,31 +137,40 @@ export function validateVehicle(
   if (!invoice) return out;
   const inv = invoice.fields;
 
-  if (funding) {
-    const fc = funding.fields;
-    if (fc.chassis && fc.chassis !== inv.chassis) {
-      out.push(
-        finding(
-          vehicle.vin,
-          "R01",
-          `The bank confirmed funding against chassis ${fc.chassis}; the invoice is for ${inv.chassis}.`,
-          ["FUNDING_CONFIRMATION", "INVOICE"],
-          { field: "chassis", expected: inv.chassis, found: fc.chassis }
-        )
-      );
-    }
-    if (fc.amount && fc.amount !== inv.amount) {
-      const gap = Number(inv.amount) - Number(fc.amount);
-      out.push(
-        finding(
-          vehicle.vin,
-          "R02",
-          `Funding confirmation is ${inr(Math.abs(gap))} ${gap > 0 ? "short of" : "above"} the invoiced value.`,
-          ["FUNDING_CONFIRMATION", "INVOICE"],
-          { field: "amount", expected: inr(inv.amount), found: inr(fc.amount) }
-        )
-      );
-    }
+  if (eway && eway.fields.chassis && eway.fields.chassis !== inv.chassis) {
+    out.push(
+      finding(
+        vehicle.vin,
+        "R01",
+        `The e-way bill was raised against chassis ${eway.fields.chassis}; the invoice is for ${inv.chassis}.`,
+        ["EWAY_BILL", "INVOICE"],
+        { field: "chassis", expected: inv.chassis, found: eway.fields.chassis }
+      )
+    );
+  }
+
+  if (challan && challan.fields.chassis && challan.fields.chassis !== inv.chassis) {
+    out.push(
+      finding(
+        vehicle.vin,
+        "R02",
+        `The delivery challan names chassis ${challan.fields.chassis}; the invoice is for ${inv.chassis}.`,
+        ["DELIVERY_CHALLAN", "INVOICE"],
+        { field: "chassis", expected: inv.chassis, found: challan.fields.chassis }
+      )
+    );
+  }
+
+  if (eway?.fields.validTill && eway.fields.validTill < DEMO_NOW.slice(0, 10)) {
+    out.push(
+      finding(
+        vehicle.vin,
+        "R06",
+        `The e-way bill lapsed on ${eway.fields.validTill} and the car has not left the plant.`,
+        ["EWAY_BILL"],
+        { field: "validTill", expected: `on or after ${DEMO_NOW.slice(0, 10)}`, found: eway.fields.validTill }
+      )
+    );
   }
 
   const expectedCircular = expectedCircularFor(inv.invoiceDate);
@@ -210,13 +218,6 @@ export function validateVehicle(
   }
 
   const hasLeftPlant = Boolean(vehicle.stageTimestamps.GATE_OUT);
-  if (hasLeftPlant && !funding && canSee("FUNDING_CONFIRMATION")) {
-    out.push(
-      finding(vehicle.vin, "R06", "The car left the plant with no funding confirmation on record.", [
-        "INVOICE",
-      ])
-    );
-  }
 
   const expectedGst = Math.round(Number(inv.amount) * 0.28);
   if (Math.abs(expectedGst - Number(inv.gst)) > Number(inv.amount) * 0.01) {

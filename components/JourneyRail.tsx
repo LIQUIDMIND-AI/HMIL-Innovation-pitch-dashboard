@@ -9,8 +9,8 @@ export type RailSize = "mini" | "compact" | "full";
 const RAIL_LABELS: Record<Stage, string> = {
   ...STAGE_LABELS,
   ALLOCATION_MATCHED: "Allocation",
-  FUNDING_PENDING: "Funding Req",
-  FUNDING_RECEIVED: "Funded",
+  DOCS_VERIFIED: "Docs OK",
+  DISPATCH_READY: "Papers",
   IN_TRANSIT: "Transit",
 };
 

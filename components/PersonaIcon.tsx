@@ -1,7 +1,6 @@
 import {
   Building2,
   Factory,
-  Landmark,
   MapPin,
   Store,
   Truck,
@@ -14,7 +13,6 @@ export const ROLE_ICONS: Record<Role, LucideIcon> = {
   plant: Factory,
   ro: MapPin,
   dealer: Store,
-  bank: Landmark,
   lsp: Truck,
 };
 

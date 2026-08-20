@@ -25,7 +25,7 @@ const SUBSTITUTION_CASE = "MALBB51RLSM104012";
 const TRANSIT_KRISHNA = "MALBB51RLSM104003";
 const TRANSIT_METRO = "MALBB51RLSM104014";
 const AWAITING_PICKUP = "MALBB51RLSM104004";
-const FUNDING_PENDING_KRISHNA = "MALBB51RLSM104006";
+const AWAITING_CHECKS_KRISHNA = "MALBB51RLSM104006";
 const DELIVERED_KRISHNA = "MALBB51RLSM104001";
 
 /** Every persona gets its own script — same shared record, six different questions. */
@@ -33,23 +33,23 @@ export const CHAT_SCRIPTS: Record<Role, ChatQa[]> = {
   hq: [
     {
       q: "Where is the pipeline stuck right now?",
-      a: "Five cars are held up: one chassis mismatch, one price-circular mismatch, one variant mismatch, one funding request past the 72-hour SLA, and one substitution in progress with the Chandigarh RO.",
+      a: "Five cars are held up: dispatch papers raised against the wrong chassis, a superseded price circular, an allocation variant mismatch, one car past the 48-hour document-verification SLA, and one substitution after loading damage.",
       snippet: { kind: "link", href: "/hq/exceptions", label: "Open the exception queue" },
     },
     {
       q: "Which car has been waiting longest?",
-      a: "Chassis 4011 at Krishna Hyundai — the funding confirmation has been pending 76 hours, past the 48–72h dealer-finance norm.",
+      a: "Chassis 4011 at Krishna Hyundai — document verification has been open 76 hours against a 48-hour SLA, so no dispatch paperwork exists yet.",
       snippet: { kind: "vehicle", vin: SLA_CASE },
     },
     {
       q: "What is blocking chassis 4921?",
-      a: "The bank's funding confirmation cites chassis 4912; the HMIL invoice says 4921. One digit, transposed. Gate pass stays blocked until the two records agree.",
+      a: "The e-way bill and challan were raised against chassis 4912; the invoice says 4921. One digit, transposed. The gate pass stays blocked until the papers and the invoice agree.",
       snippet: { kind: "checks", vin: HERO },
     },
     {
-      q: "Which bank is slower to fund?",
-      a: "Across the seeded records, HDFC's dealer-finance desk averages roughly a day longer from funding request to confirmation than ICICI's. The funding-lag chart on your overview breaks it down.",
-      snippet: { kind: "link", href: "/hq", label: "See the funding-lag chart" },
+      q: "Which leg is costing the most time?",
+      a: "Allocation to documents-verified is the slow leg — it is where cars sit while a mismatch is chased. The dwell chart on your overview breaks the whole flow down leg by leg.",
+      snippet: { kind: "link", href: "/hq", label: "See the dwell chart" },
     },
     {
       q: "How is the North region doing?",
@@ -63,7 +63,7 @@ export const CHAT_SCRIPTS: Record<Role, ChatQa[]> = {
     },
     {
       q: "Are any documents out of line?",
-      a: "The rulebook is flagging a chassis mismatch, a superseded price circular, a challan raised against the wrong dealer code, a short-paid funding confirmation and two missing attachments.",
+      a: "The rulebook is flagging dispatch papers on the wrong chassis, a superseded price circular, an allocation variant mismatch, a challan raised against the wrong dealer code, a lapsed e-way bill and two missing attachments.",
       snippet: { kind: "link", href: "/hq/compliance", label: "Open the compliance report" },
     },
     {
@@ -74,12 +74,12 @@ export const CHAT_SCRIPTS: Record<Role, ChatQa[]> = {
   plant: [
     {
       q: "Which cars can I gate-out today?",
-      a: "Any car whose five cross-checks are all CLEAR and whose funding has landed. The gate-pass button stays disabled everywhere else, so nothing leaves the yard against a mismatched document.",
+      a: "Any car whose five cross-checks are clear and whose e-way bill and challan are raised against the right chassis. The gate-pass button stays disabled everywhere else, so nothing leaves the yard against a mismatched document.",
       snippet: { kind: "link", href: "/plant/queue", label: "Open the gate-out queue" },
     },
     {
       q: "Why is chassis 4921 blocked?",
-      a: "Chassis mismatch. The bank confirmed funding against 4912, the invoice is for 4921 — four of five checks are clear, that one is not.",
+      a: "Chassis mismatch. The dispatch papers were raised against 4912, the invoice is for 4921 — four of five checks are clear, that one is not.",
       snippet: { kind: "checks", vin: HERO },
     },
     {
@@ -89,28 +89,28 @@ export const CHAT_SCRIPTS: Record<Role, ChatQa[]> = {
     },
     {
       q: "What is the substitution case?",
-      a: "Chassis 4012 was damaged during plant loading. A substitute VIN allocation is in progress with the Chandigarh RO; the funding request is reissued once that confirms.",
+      a: "Chassis 4012 was damaged during plant loading. A substitute VIN allocation is in progress with the Chandigarh RO; the invoice is re-raised against the substitute unit once that confirms.",
       snippet: { kind: "vehicle", vin: SUBSTITUTION_CASE },
     },
     {
       q: "Do I ever have to call the dealer?",
-      a: "No. The moment the dealer's bank confirmation lands, the checks re-run here and the car turns green on this screen by itself. That is the phone call DhanFlow replaces.",
+      a: "No. The moment a document is corrected anywhere, the checks re-run here and the car turns green on this screen by itself. That is the phone call DhanFlow replaces.",
     },
   ],
   ro: [
     {
       q: "Which dealer is worst hit?",
-      a: "Krishna Hyundai, Chandigarh. Four of its nine cars are stuck — a chassis mismatch, a price mismatch, a funding SLA breach and a substitution in progress.",
+      a: "Krishna Hyundai, Chandigarh. Four of its nine cars are stuck — dispatch papers on the wrong chassis, a price mismatch, a document-verification SLA breach and a substitution in progress.",
       snippet: { kind: "link", href: "/ro/dealers", label: "Open the dealer rollup" },
     },
     {
-      q: "Which cars breach the 72-hour funding SLA?",
-      a: "Chassis 4011 — the funding confirmation has been pending 76 hours. It is the one worth chasing this morning.",
+      q: "Which cars are past their SLA?",
+      a: "Chassis 4011 — document verification has been open 76 hours against a 48-hour promise. It is the one worth chasing this morning.",
       snippet: { kind: "vehicle", vin: SLA_CASE },
     },
     {
       q: "What is stuck at Krishna Hyundai?",
-      a: "Chassis 4921 (chassis mismatch), 4009 (price circular), 4011 (funding pending 76h) and 4012 (substitution in progress).",
+      a: "Chassis 4921 (papers on the wrong chassis), 4009 (price circular), 4011 (verification open 76h) and 4012 (substitution in progress).",
       snippet: { kind: "checks", vin: HERO },
     },
     {
@@ -126,17 +126,17 @@ export const CHAT_SCRIPTS: Record<Role, ChatQa[]> = {
   dealer: [
     {
       q: "How many of my cars are at risk?",
-      a: "Four. Chassis 4921 is held on a chassis mismatch, 4009 on a price circular, 4011 is waiting on your bank past the SLA, and 4012 is being substituted after loading damage.",
+      a: "Four. Chassis 4921 is held on dispatch papers raised against the wrong chassis, 4009 on a superseded price circular, 4011 is past its document-verification SLA, and 4012 is being substituted after loading damage.",
       snippet: { kind: "link", href: "/dealer/exceptions", label: "See all four" },
     },
     {
       q: "Where is my Creta SX(O)?",
-      a: "Still at the Sriperumbudur plant. Funding was confirmed, but against chassis 4912 instead of 4921 — the gate pass is blocked on that one digit.",
+      a: "Still at the Sriperumbudur plant. The e-way bill and challan were raised against chassis 4912 instead of 4921 — the gate pass is blocked on that one digit.",
       snippet: { kind: "vehicle", vin: HERO },
     },
     {
       q: "What do I need to do to unblock it?",
-      a: "Ask HDFC to reissue the funding confirmation against chassis 4921. The moment it lands, all five checks turn green and the plant can issue the gate pass the same day.",
+      a: "The plant has to cancel the e-way bill on 4912 and re-raise it against 4921. The moment it lands, all five checks turn green and the gate pass can be issued the same day.",
       snippet: { kind: "checks", vin: HERO },
     },
     {
@@ -145,9 +145,9 @@ export const CHAT_SCRIPTS: Record<Role, ChatQa[]> = {
       snippet: { kind: "link", href: "/dealer/tracking", label: "View on map" },
     },
     {
-      q: "Is funding confirmed for my Creta SX?",
-      a: "Not yet — chassis 4006 is sitting at funding requested. It is inside the normal turnaround window, so nothing to chase today.",
-      snippet: { kind: "vehicle", vin: FUNDING_PENDING_KRISHNA },
+      q: "Are the papers ready on my Creta SX?",
+      a: "Not yet — chassis 4006 is with the plant for document verification, still inside the 48-hour SLA, so nothing to chase today.",
+      snippet: { kind: "vehicle", vin: AWAITING_CHECKS_KRISHNA },
     },
     {
       q: "Can I book more cars for Diwali?",
@@ -163,36 +163,6 @@ export const CHAT_SCRIPTS: Record<Role, ChatQa[]> = {
       q: "Which cars have I already received?",
       a: "Chassis 4001, the Titan Grey Creta SX(O), was delivered to your yard on 8 August — invoice to delivery in six days with no phone calls in between.",
       snippet: { kind: "vehicle", vin: DELIVERED_KRISHNA },
-    },
-  ],
-  bank: [
-    {
-      q: "Which funding requests are still open?",
-      a: "Two requests against Krishna Hyundai are still awaiting confirmation — chassis 4006 and chassis 4011.",
-      snippet: { kind: "link", href: "/bank/funding", label: "Open the request table" },
-    },
-    {
-      q: "Why is chassis 4921 flagged?",
-      a: "Your confirmation references chassis 4912; HMIL's invoice is for 4921. DhanFlow flags the difference rather than letting the car sit at the plant unexplained.",
-      snippet: { kind: "checks", vin: HERO },
-    },
-    {
-      q: "Which request is oldest?",
-      a: "Chassis 4011 — requested 76 hours ago, past the 48–72 hour dealer-finance norm.",
-      snippet: { kind: "vehicle", vin: SLA_CASE },
-    },
-    {
-      q: "What happens when I mark funding released?",
-      a: "The status flips on the one shared record: the dealer sees it, the plant's checks re-run, and — if everything matches — the car becomes gate-pass eligible immediately.",
-    },
-    {
-      q: "Who sees my confirmation once I issue it?",
-      a: "The manufacturer, the plant, the regional office and the dealer — all at the same instant, on the same record. There is no forwarding step and no second copy to reconcile.",
-      snippet: { kind: "link", href: "/bank/documents", label: "Open the documents desk" },
-    },
-    {
-      q: "Does DhanFlow send you documents?",
-      a: "No. DhanFlow never sends anything to a bank and never creates an invoice. It reads the status of a funding request and shows it to everyone who needs it.",
     },
   ],
   lsp: [

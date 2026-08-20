@@ -67,13 +67,13 @@ export default function LoginPage() {
 
           <p className="mt-5 max-w-md text-sm leading-relaxed text-white/70">
             Invoice-to-delivery visibility for Hyundai Motor India — the plant, the regional
-            office, the dealer, the bank and the transporter all reading the same vehicle record,
-            each seeing exactly their own slice of it.
+            office, the dealer and the transporter all reading the same vehicle record and the
+            same documents, each seeing exactly their own slice of it.
           </p>
 
           <dl className="mt-8 grid max-w-md grid-cols-3 gap-4 border-t border-white/15 pt-6">
             {[
-              { k: "6", v: "entities" },
+              { k: "5", v: "entities" },
               { k: "1", v: "shared record" },
               { k: "0", v: "phone calls" },
             ].map((s) => (
