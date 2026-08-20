@@ -18,7 +18,7 @@ export default function PipelineBoard({
         return (
           <div
             key={col.key}
-            className="flex min-w-[210px] flex-1 shrink-0 snap-start flex-col rounded-lg border border-border bg-surface"
+            className="flex min-w-[168px] flex-1 shrink-0 snap-start flex-col rounded-xl border border-border bg-canvas"
           >
             <div className="flex items-center justify-between border-b border-border px-3 py-2">
               <h3 className="text-xs font-semibold text-ink">{col.label}</h3>
@@ -28,7 +28,7 @@ export default function PipelineBoard({
             </div>
             <div className="flex flex-col gap-2 p-2">
               {items.length === 0 ? (
-                <p className="px-1 py-6 text-center text-xs text-ink-muted">No vehicles</p>
+                <p className="px-1 py-6 text-center text-xs text-ink-muted">Empty leg</p>
               ) : (
                 items.map((v) => (
                   <VehicleCard key={v.vin} vehicle={v} showDealer={showDealer} showLsp={showLsp} />

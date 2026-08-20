@@ -7,38 +7,13 @@ import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useVehicleStore } from "@/lib/store";
 import { findVehicleForRole, getVehicleTone } from "@/lib/selectors";
-import { STAGE_LABELS, STAGE_ORDER, type Vehicle } from "@/lib/types";
 import DashboardShell from "@/components/DashboardShell";
 import StatusChip from "@/components/StatusChip";
 import CheckRail from "@/components/CheckRail";
 import DocCompare from "@/components/DocCompare";
+import JourneyRail from "@/components/JourneyRail";
 import NotesThread from "@/components/NotesThread";
 import VehicleActions from "@/components/VehicleActions";
-
-function StageRail({ stage }: { stage: Vehicle["stage"] }) {
-  const currentIndex = STAGE_ORDER.indexOf(stage);
-  return (
-    <ol className="flex flex-wrap items-center gap-1.5">
-      {STAGE_ORDER.map((s, i) => {
-        const reached = i <= currentIndex;
-        return (
-          <li key={s} className="flex items-center gap-1.5">
-            <span
-              className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                reached ? "bg-navy text-white" : "bg-navy-light text-ink-muted"
-              }`}
-            >
-              {STAGE_LABELS[s]}
-            </span>
-            {i < STAGE_ORDER.length - 1 && (
-              <span className="h-px w-4 bg-border" aria-hidden="true" />
-            )}
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
 
 const ROLES_WITH_DOC_COMPARE = new Set(["hq", "plant", "ro", "dealer"]);
 const ROLES_WITH_NOTES = new Set(["hq", "plant", "ro", "dealer"]);
@@ -53,26 +28,23 @@ export default function VehiclePage() {
     if (!role) router.replace("/login");
   }, [role, router]);
 
-  if (!role) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-ink-muted">
-        Loading…
-      </div>
-    );
-  }
+  if (!role) return null;
 
   const vehicle = findVehicleForRole(vehicles, role, vin);
 
   if (!vehicle) {
     return (
-      <DashboardShell title="Vehicle not found">
-        <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center">
+      <DashboardShell
+        title="Vehicle not found"
+        caption="This VIN isn't visible from your role, or doesn't exist."
+      >
+        <div className="rounded-xl border border-dashed border-border bg-surface p-8 text-center">
           <p className="text-sm text-ink-muted">
-            This VIN isn&apos;t visible from your role, or doesn&apos;t exist.
+            Role scoping is deliberate — you only ever see the cars your entity owns a stake in.
           </p>
           <Link
             href={`/${role}`}
-            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-navy hover:text-navy-hover"
+            className="mt-3 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-role"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Back to dashboard
@@ -88,106 +60,115 @@ export default function VehiclePage() {
   const showNotes = ROLES_WITH_NOTES.has(role);
 
   return (
-    <DashboardShell title={`${vehicle.model} ${vehicle.variant} · •••${vehicle.chassisShort}`}>
-      <div className="flex flex-col gap-6">
-        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs">
-          <Link
-            href={`/${role}`}
-            className="inline-flex items-center gap-1 font-medium text-ink-muted hover:text-navy"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-            Dashboard
-          </Link>
-          <span className="text-ink-muted" aria-hidden="true">
-            /
-          </span>
-          <span className="font-medium text-ink">
-            {vehicle.model} {vehicle.variant} · •••{vehicle.chassisShort}
-          </span>
-        </nav>
+    <DashboardShell
+      title={`${vehicle.model} ${vehicle.variant}`}
+      caption={`${vehicle.colour} · ${vehicle.dealerName} · ${vehicle.region}`}
+    >
+      <nav aria-label="Breadcrumb" className="-mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+        <Link
+          href={`/${role}`}
+          className="inline-flex items-center gap-1 font-medium text-ink-muted hover:text-role"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+          Dashboard
+        </Link>
+        <span className="text-ink-muted" aria-hidden="true">
+          /
+        </span>
+        <span className="font-mono-vin font-medium text-ink">•••{vehicle.chassisShort}</span>
+      </nav>
 
-        <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-surface p-4">
-          <div>
+      {/* The rail is the hero: one glance answers "where is this car, and is it moving?" */}
+      <section className="rounded-xl border border-border bg-surface p-5 shadow-card sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold text-ink">
+              <h2 className="font-display text-xl leading-tight text-ink">
                 {vehicle.model} {vehicle.variant}
               </h2>
               <StatusChip tone={tone}>{chipLabel}</StatusChip>
             </div>
-            <p className="mt-1 text-sm text-ink-muted">
-              <span className="font-mono-vin">{vehicle.vin}</span> · {vehicle.colour} ·{" "}
-              {vehicle.dealerName}
-            </p>
-            {vehicle.stuckReason && (
-              <p
-                className={`mt-2 max-w-2xl text-sm ${
-                  tone === "pending" ? "text-pending" : "text-stuck"
-                }`}
-              >
-                {vehicle.stuckReason}
-              </p>
-            )}
+            <p className="font-mono-vin mt-1 text-xs text-ink-muted">{vehicle.vin}</p>
           </div>
           <VehicleActions vehicle={vehicle} />
         </div>
 
-        <section aria-labelledby="stage-heading">
-          <h3 id="stage-heading" className="mb-2 text-sm font-semibold text-ink">
-            Pipeline stage
-          </h3>
-          <StageRail stage={vehicle.stage} />
-        </section>
+        <div className="mt-8 px-1">
+          <JourneyRail vehicle={vehicle} size="full" showTimestamps />
+        </div>
 
-        <section aria-labelledby="checks-heading">
-          <h3 id="checks-heading" className="mb-2 text-sm font-semibold text-ink">
-            Cross-checks
-          </h3>
-          <CheckRail checks={vehicle.checks} />
-        </section>
-
-        {showDocCompare && (
-          <section aria-labelledby="doc-heading">
-            <h3 id="doc-heading" className="mb-2 text-sm font-semibold text-ink">
-              Invoice vs Funding Confirmation
-            </h3>
-            <DocCompare vehicle={vehicle} />
-          </section>
+        {vehicle.stuckReason && (
+          <p
+            className={`mt-6 rounded-lg border px-3 py-2.5 text-sm ${
+              tone === "pending"
+                ? "border-pending/30 bg-pending-bg text-pending"
+                : "border-stuck/30 bg-stuck-bg text-stuck"
+            }`}
+          >
+            {vehicle.stuckReason}
+          </p>
         )}
+      </section>
 
-        {vehicle.lsp && (
-          <section aria-labelledby="lsp-heading">
-            <h3 id="lsp-heading" className="mb-2 text-sm font-semibold text-ink">
-              Transit
-            </h3>
-            <div className="rounded-lg border border-border bg-surface p-4 text-sm">
-              <p className="text-ink">
-                {vehicle.lsp.name} · <span className="font-mono-vin">{vehicle.lsp.truckNo}</span>
-              </p>
-              <p className="mt-1 text-ink-muted">
-                {vehicle.lsp.route} · ETA {vehicle.lsp.etaDays}d
-              </p>
-              <p
-                className={`mt-1 font-medium ${
-                  vehicle.lsp.lastMilestone.toLowerCase().includes("delayed")
-                    ? "text-pending"
-                    : "text-ink-muted"
-                }`}
+      <section aria-labelledby="checks-heading">
+        <h3 id="checks-heading" className="mb-2 text-sm font-semibold text-ink">
+          Cross-checks
+        </h3>
+        <CheckRail checks={vehicle.checks} />
+      </section>
+
+      {showDocCompare && (
+        <section aria-labelledby="doc-heading">
+          <h3 id="doc-heading" className="mb-2 text-sm font-semibold text-ink">
+            Invoice vs Funding Confirmation
+          </h3>
+          <DocCompare vehicle={vehicle} />
+        </section>
+      )}
+
+      {vehicle.lsp && (
+        <section aria-labelledby="lsp-heading">
+          <h3 id="lsp-heading" className="mb-2 text-sm font-semibold text-ink">
+            Transit
+          </h3>
+          <div className="rounded-xl border border-border bg-surface p-5 text-sm shadow-card">
+            <p className="text-ink">
+              {vehicle.lsp.name} ·{" "}
+              <span className="font-mono-vin">{vehicle.lsp.truckNo}</span>
+            </p>
+            <p className="mt-1 text-ink-muted">
+              {vehicle.lsp.route} · ETA{" "}
+              <span className="font-mono-vin">{vehicle.lsp.etaDays}d</span>
+            </p>
+            <p
+              className={`mt-1 font-medium ${
+                vehicle.lsp.lastMilestone.toLowerCase().includes("delayed")
+                  ? "text-pending"
+                  : "text-ink-muted"
+              }`}
+            >
+              {vehicle.lsp.lastMilestone}
+            </p>
+            {(role === "dealer" || role === "lsp") && (
+              <Link
+                href={`/${role}/tracking`}
+                className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-role hover:underline"
               >
-                {vehicle.lsp.lastMilestone}
-              </p>
-            </div>
-          </section>
-        )}
+                View on map →
+              </Link>
+            )}
+          </div>
+        </section>
+      )}
 
-        {showNotes && (
-          <section aria-labelledby="notes-heading">
-            <h3 id="notes-heading" className="mb-2 text-sm font-semibold text-ink">
-              Notes
-            </h3>
-            <NotesThread notes={vehicle.notes} />
-          </section>
-        )}
-      </div>
+      {showNotes && (
+        <section aria-labelledby="notes-heading">
+          <h3 id="notes-heading" className="mb-2 text-sm font-semibold text-ink">
+            Notes
+          </h3>
+          <NotesThread notes={vehicle.notes} />
+        </section>
+      )}
     </DashboardShell>
   );
 }

@@ -5,6 +5,7 @@ import {
   Building2,
   Truck,
   Landmark,
+  MapPin,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "@/lib/types";
@@ -35,6 +36,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
   dealer: [
     { label: "Overview", href: "/dealer", icon: LayoutDashboard },
     { label: "Pipeline", href: "/dealer/pipeline", icon: GitBranch },
+    { label: "Tracking", href: "/dealer/tracking", icon: MapPin },
     { label: "Exceptions", href: "/dealer/exceptions", icon: AlertTriangle },
   ],
   bank: [
@@ -44,6 +46,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
   lsp: [
     { label: "Overview", href: "/lsp", icon: LayoutDashboard },
     { label: "Assigned Trips", href: "/lsp/trips", icon: Truck },
+    { label: "Tracking", href: "/lsp/tracking", icon: MapPin },
     { label: "Exceptions", href: "/lsp/exceptions", icon: AlertTriangle },
   ],
 };

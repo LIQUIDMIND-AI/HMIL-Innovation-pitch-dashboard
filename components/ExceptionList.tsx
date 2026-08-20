@@ -10,15 +10,15 @@ export default function ExceptionList({ vehicles }: { vehicles: Vehicle[] }) {
 
   if (stuck.length === 0) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-surface p-6 text-sm text-ink-muted">
+      <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-surface p-6 text-sm text-ink-muted">
         <CheckCircle2 className="h-4 w-4 shrink-0 text-clear" aria-hidden="true" />
-        No exceptions — every vehicle in view is clear.
+        Nothing needs you right now — every car in view is clear.
       </div>
     );
   }
 
   return (
-    <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
+    <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-card">
       {stuck.map((v) => {
         const age = getVehicleAgeHours(v);
         const substitution = isSubstitutionCase(v);
@@ -26,7 +26,7 @@ export default function ExceptionList({ vehicles }: { vehicles: Vehicle[] }) {
           <li key={v.vin}>
             <Link
               href={`/vehicle/${v.vin}`}
-              className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-navy-light/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+              className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-role-tint/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
             >
               <AlertTriangle
                 className={`mt-0.5 h-4 w-4 shrink-0 ${substitution ? "text-pending" : "text-stuck"}`}

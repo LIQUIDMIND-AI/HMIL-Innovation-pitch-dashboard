@@ -1,5 +1,12 @@
-import { DEALERS, DEMO_NOW, VEHICLES } from "./mockData";
-import { STAGE_ORDER, type ChipTone, type Role, type Stage, type Vehicle } from "./types";
+import { DEALERS, DEMO_NOW, TRIPS, VEHICLES } from "./mockData";
+import {
+  STAGE_ORDER,
+  type ChipTone,
+  type Role,
+  type Stage,
+  type Trip,
+  type Vehicle,
+} from "./types";
 
 /** The six legs of the pipeline (plan.md §6) — FUNDING_PENDING/FUNDING_RECEIVED collapse into one "Funding" column. */
 export const PIPELINE_COLUMNS: { key: string; label: string; stages: Stage[] }[] = [
@@ -287,4 +294,82 @@ if (process.env.NODE_ENV !== "production") {
     (role) => `${role}=${getVehiclesForRole(role).length}`
   );
   console.log(`[selectors] vehicle counts per role → ${counts.join(", ")}`);
+}
+
+/** Deterministic time-of-day word, derived from the fixed demo clock — never the real one. */
+export function getGreetingWord(): string {
+  const hour = Number(DEMO_NOW.slice(11, 13));
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+/**
+ * The one question each persona opens DhanFlow to answer, answered in one line
+ * from their own role-scoped slice (build plan v3 §1.1).
+ */
+export function getPersonaHeadline(vehicles: Vehicle[], role: Role): string {
+  const total = vehicles.length;
+  const stuck = vehicles.filter((v) => v.overall === "STUCK").length;
+
+  switch (role) {
+    case "hq": {
+      const dealers = new Set(vehicles.filter((v) => v.overall === "STUCK").map((v) => v.dealerCode))
+        .size;
+      return stuck === 0
+        ? `All ${total} cars in the national pipeline are clear.`
+        : `${stuck} of ${total} cars are stuck, across ${dealers} dealer${dealers === 1 ? "" : "s"}.`;
+    }
+    case "plant": {
+      const ready = vehicles.filter(
+        (v) => v.overall === "CLEAR" && v.stage === "FUNDING_RECEIVED"
+      ).length;
+      return `${ready} car${ready === 1 ? "" : "s"} clear for gate pass today, ${stuck} blocked on document mismatches.`;
+    }
+    case "ro": {
+      const breaches = vehicles.filter(
+        (v) =>
+          v.stage === "FUNDING_PENDING" &&
+          v.stageTimestamps.FUNDING_PENDING &&
+          hoursSince(v.stageTimestamps.FUNDING_PENDING, DEMO_NOW) > 72
+      ).length;
+      return `${stuck} of ${total} cars in your region are stuck — ${breaches} past the 72-hour funding SLA.`;
+    }
+    case "dealer": {
+      const arriving = vehicles.filter((v) => v.stage === "IN_TRANSIT").length;
+      return `${stuck} of your ${total} cars are at risk — ${arriving} more arriving this week.`;
+    }
+    case "bank": {
+      const pending = vehicles.filter((v) => v.bank.status === "PENDING").length;
+      const mismatch = vehicles.filter((v) => v.bank.status === "MISMATCH").length;
+      return `${pending} funding request${pending === 1 ? "" : "s"} still open, ${mismatch} flagged for a chassis mismatch.`;
+    }
+    case "lsp": {
+      const inTransit = vehicles.filter((v) => v.stage === "IN_TRANSIT").length;
+      const delayed = vehicles.filter((v) =>
+        v.lsp?.lastMilestone.toLowerCase().includes("delayed")
+      ).length;
+      return `${inTransit} car${inTransit === 1 ? "" : "s"} on the road, ${delayed} trip${delayed === 1 ? "" : "s"} running late.`;
+    }
+    default:
+      return "";
+  }
+}
+
+/**
+ * Trips a role may watch: a trip is in scope only if at least one car aboard is
+ * in scope. The dealer therefore sees its own run and nothing else, while the
+ * LSP sees every trip it is carrying — same rule as every other data read here.
+ */
+export function getTripsForRole(vehicles: Vehicle[], role: Role): Trip[] {
+  const visible = new Set(filterVehiclesForRole(vehicles, role).map((v) => v.vin));
+  return TRIPS.filter((trip) => trip.vins.some((vin) => visible.has(vin)));
+}
+
+/** The in-scope cars aboard a trip — never the raw trip.vins list. */
+export function getTripVehicles(vehicles: Vehicle[], role: Role, trip: Trip): Vehicle[] {
+  const scoped = filterVehiclesForRole(vehicles, role);
+  return trip.vins
+    .map((vin) => scoped.find((v) => v.vin === vin))
+    .filter((v): v is Vehicle => Boolean(v));
 }

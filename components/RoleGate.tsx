@@ -31,13 +31,10 @@ export default function RoleGate({
     }
   }, [sessionRole, role, router]);
 
-  if (sessionRole !== role) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-ink-muted">
-        Loading…
-      </div>
-    );
-  }
+  // Nothing is rendered while the redirect resolves — data is local, so there
+  // is never a loading state to show, and a flash of placeholder text would
+  // read as one.
+  if (sessionRole !== role) return null;
 
   return <>{children}</>;
 }

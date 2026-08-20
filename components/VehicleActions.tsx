@@ -29,7 +29,7 @@ function AddNoteControl({
     e.preventDefault();
     const trimmed = text.trim();
     if (!trimmed || !persona) return;
-    addNote(vin, { author: persona.org, role: authorRole, text: trimmed });
+    addNote(vin, { author: persona.name, role: authorRole, text: trimmed });
     setText("");
     setExpanded(false);
   }
@@ -107,7 +107,7 @@ export default function VehicleActions({ vehicle }: { vehicle: Vehicle }) {
             className={SECONDARY_BTN}
             onClick={() =>
               addNote(vehicle.vin, {
-                author: persona.org,
+                author: persona.name,
                 role: "hq",
                 text: "Exception acknowledged by HQ.",
               })
@@ -154,7 +154,7 @@ export default function VehicleActions({ vehicle }: { vehicle: Vehicle }) {
             className={SECONDARY_BTN}
             onClick={() =>
               addNote(vehicle.vin, {
-                author: persona.org,
+                author: persona.name,
                 role: "ro",
                 text: "Escalated to HQ for review.",
               })
@@ -192,7 +192,7 @@ export default function VehicleActions({ vehicle }: { vehicle: Vehicle }) {
             className={SECONDARY_BTN}
             onClick={() =>
               addNote(vehicle.vin, {
-                author: persona.org,
+                author: persona.name,
                 role: "dealer",
                 text: "Proof of delivery acknowledged by dealer.",
               })

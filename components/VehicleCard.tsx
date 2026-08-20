@@ -4,6 +4,7 @@ import type { Vehicle } from "@/lib/types";
 import { getVehicleTone } from "@/lib/selectors";
 import { formatINR } from "@/lib/format";
 import StatusChip from "./StatusChip";
+import JourneyRail from "./JourneyRail";
 
 export default function VehicleCard({
   vehicle,
@@ -20,20 +21,27 @@ export default function VehicleCard({
   return (
     <Link
       href={`/vehicle/${vehicle.vin}`}
-      className="flex flex-col gap-1.5 rounded-md border border-border bg-canvas px-2.5 py-2 text-left transition-colors hover:border-navy/40 hover:bg-navy-light/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+      className="flex flex-col gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 text-left shadow-card transition-colors hover:border-role/40 hover:bg-role-tint/40"
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-sm font-medium text-ink">
+        <span className="truncate text-sm font-semibold text-ink">
           {vehicle.model} {vehicle.variant}
         </span>
         <StatusChip tone={tone} className="shrink-0">
           {chipLabel}
         </StatusChip>
       </div>
-      <div className="flex items-center justify-between gap-2 text-xs text-ink-muted">
-        <span className="font-mono-vin">•••{vehicle.chassisShort}</span>
-        <span className="tabular-nums">{formatINR(vehicle.invoice.amount + vehicle.invoice.gst)}</span>
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className="font-mono-vin text-ink-muted">•••{vehicle.chassisShort}</span>
+        <span className="font-mono-vin text-ink">
+          {formatINR(vehicle.invoice.amount + vehicle.invoice.gst)}
+        </span>
       </div>
+
+      <div className="pt-2">
+        <JourneyRail vehicle={vehicle} size="compact" />
+      </div>
+
       {showDealer && (
         <span className="truncate text-[11px] text-ink-muted">{vehicle.dealerName}</span>
       )}

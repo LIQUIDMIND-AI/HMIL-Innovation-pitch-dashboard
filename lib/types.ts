@@ -94,3 +94,36 @@ export interface Vehicle {
   lsp?: LspInfo;
   notes: Note[];
 }
+
+/** A milestone on a live trip, positioned as a fraction (0–1) along the drawn route. */
+export interface TripMilestone {
+  label: string;
+  /** Fixed ISO timestamp, or undefined for a milestone not yet passed. */
+  at?: string;
+  reached: boolean;
+  /** Fraction along the route, 0–1 — drives the timeline below the map. */
+  t: number;
+  /** Hardcoded position in the map viewBox, so dots paint instantly with no path sampling. */
+  cx: number;
+  cy: number;
+}
+
+export interface Trip {
+  id: string;
+  carrier: string;
+  truckNo: string;
+  origin: string;
+  destination: string;
+  /** VINs aboard — resolved through the role-scoped selectors, never rendered raw. */
+  vins: string[];
+  promiseDate: string;
+  etaDate: string;
+  status: "ON_TIME" | "DELAYED";
+  /** Days late vs the promise date; 0 when on time. */
+  daysLate: number;
+  /** How far along the drawn route the truck currently is, 0–1. */
+  progress: number;
+  /** SVG path the truck runs along, in the tracking map's viewBox. */
+  path: string;
+  milestones: TripMilestone[];
+}

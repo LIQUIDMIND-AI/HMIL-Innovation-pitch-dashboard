@@ -1,24 +1,67 @@
 @import "tailwindcss";
 
+/*
+ * DhanFlow design tokens — "The Control Tower" (build plan v3 §3).
+ * Dark is reserved for the frame (persona bar, login, chatbot header); every
+ * working surface stays light.
+ */
 :root {
-  --color-canvas: #f4f5f7;
+  --color-canvas: #f6f8fb;
   --color-surface: #ffffff;
-  --color-border: #e2e4e9;
-  --color-ink: #101828;
-  --color-ink-muted: #5b6472;
+  --color-border: #e3e9f2;
+  --color-ink: #0b2447;
+  --color-ink-muted: #5b6b82;
 
   --color-navy: #0b2447;
-  --color-navy-hover: #133766;
-  --color-navy-light: #eaf0f9;
+  --color-navy-hover: #123563;
+  --color-navy-light: #edf2f9;
 
   --color-clear: #16a34a;
-  --color-clear-bg: #eafaf0;
+  --color-clear-bg: #e8f7ee;
   --color-stuck: #dc2626;
   --color-stuck-bg: #fdecec;
   --color-pending: #d97706;
-  --color-pending-bg: #fdf2e2;
+  --color-pending-bg: #fdf3e3;
+  --color-info: #1f6feb;
 
-  --font-mono-stack: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  /* Role hues — one per persona, used for ribbons, sidebar active state, KPI accents. */
+  --hue-hq: #0f766e;
+  --hue-plant: #7c3aed;
+  --hue-ro: #4338ca;
+  --hue-dealer: #1f6feb;
+  --hue-bank: #b45309;
+  --hue-lsp: #be185d;
+
+  /* Live role accent — re-pointed by [data-role] on the app shell. */
+  --role-hue: var(--color-navy);
+  --role-tint: var(--color-navy-light);
+
+  --shadow-card: 0 1px 3px rgb(11 36 71 / 0.08);
+}
+
+[data-role="hq"] {
+  --role-hue: var(--hue-hq);
+  --role-tint: #e4f1ef;
+}
+[data-role="plant"] {
+  --role-hue: var(--hue-plant);
+  --role-tint: #f0e9fe;
+}
+[data-role="ro"] {
+  --role-hue: var(--hue-ro);
+  --role-tint: #e8e8fb;
+}
+[data-role="dealer"] {
+  --role-hue: var(--hue-dealer);
+  --role-tint: #e6effe;
+}
+[data-role="bank"] {
+  --role-hue: var(--hue-bank);
+  --role-tint: #faeee0;
+}
+[data-role="lsp"] {
+  --role-hue: var(--hue-lsp);
+  --role-tint: #fce7f0;
 }
 
 @theme inline {
@@ -38,26 +81,47 @@
   --color-stuck-bg: var(--color-stuck-bg);
   --color-pending: var(--color-pending);
   --color-pending-bg: var(--color-pending-bg);
+  --color-info: var(--color-info);
+
+  --color-role: var(--role-hue);
+  --color-role-tint: var(--role-tint);
 
   --font-sans: var(--font-inter);
-  --font-mono: var(--font-mono-stack);
+  --font-mono: var(--font-plex-mono);
+  --font-display: var(--font-fraunces);
+
+  --shadow-card: var(--shadow-card);
 }
 
 body {
   background: var(--color-canvas);
   color: var(--color-ink);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
+/* Identifiers, amounts, timestamps, rail stage labels — monospace does real work here. */
 .font-mono-vin {
-  font-family: var(--font-mono-stack), ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: 0.02em;
+  font-family: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.font-display {
+  font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  font-optical-sizing: auto;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-info);
+  outline-offset: 2px;
 }
 
 * {
   scrollbar-width: thin;
 }
+
+/* ---- Motion (deliberate, sparse — build plan v3 §3) ---- */
 
 @keyframes check-resolve {
   0% {
@@ -74,8 +138,143 @@ body {
   animation: check-resolve 300ms ease-out both;
 }
 
+@keyframes rise-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Page-load stagger: children rise 40ms apart, ~300ms in total. Once, on login. */
+.animate-rise > * {
+  animation: rise-in 300ms ease-out both;
+}
+.animate-rise > *:nth-child(2) {
+  animation-delay: 40ms;
+}
+.animate-rise > *:nth-child(3) {
+  animation-delay: 80ms;
+}
+.animate-rise > *:nth-child(4) {
+  animation-delay: 120ms;
+}
+.animate-rise > *:nth-child(5) {
+  animation-delay: 160ms;
+}
+.animate-rise > *:nth-child(n + 6) {
+  animation-delay: 200ms;
+}
+
+@keyframes slide-over-in {
+  0% {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-over {
+  animation: slide-over-in 250ms ease-out both;
+}
+
+@keyframes typing-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.animate-typing-dot {
+  animation: typing-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes launcher-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(255 255 255 / 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 12px rgb(255 255 255 / 0);
+  }
+}
+
+/* One pulse on first load, so the presenter's eye finds the launcher once. */
+.animate-launcher-pulse {
+  animation: launcher-pulse 1.4s ease-out 2;
+}
+
+/* Truck marker crawling the seeded route on the tracking map. */
+@keyframes truck-run {
+  0% {
+    offset-distance: var(--trip-start, 0%);
+  }
+  100% {
+    offset-distance: var(--trip-end, 100%);
+  }
+}
+
+.animate-truck {
+  offset-path: var(--trip-path);
+  offset-rotate: 0deg;
+  animation: truck-run var(--trip-duration, 24s) linear infinite alternate;
+}
+
+@keyframes rail-car-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-rail-car {
+  animation: rail-car-in 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes mismatch-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(220 38 38 / 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgb(220 38 38 / 0);
+  }
+}
+
+.animate-mismatch {
+  animation: mismatch-pulse 2s ease-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-check-resolve {
-    animation: none;
+  .animate-check-resolve,
+  .animate-rise > *,
+  .animate-slide-over,
+  .animate-typing-dot,
+  .animate-launcher-pulse,
+  .animate-truck,
+  .animate-rail-car,
+  .animate-mismatch {
+    animation: none !important;
+  }
+  .animate-truck {
+    offset-distance: var(--trip-end, 100%);
+  }
+  html {
+    scroll-behavior: auto;
   }
 }

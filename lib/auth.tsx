@@ -12,8 +12,19 @@ import type { Role } from "./types";
 
 export interface Persona {
   role: Role;
+  /** The human at the keyboard — shown in the persona bar and greeting. */
+  name: string;
+  initials: string;
+  /** Job title, e.g. "Dealer Principal". */
+  title: string;
+  /** Short label for the role itself, e.g. "Dealer". */
   label: string;
+  /** The organisation this persona belongs to. */
   org: string;
+  /** City / site, appended after the org in the greeting line. */
+  location: string;
+  /** The one question this persona opens the app to answer. */
+  question: string;
   username: string;
   password: string;
 }
@@ -22,43 +33,73 @@ export interface Persona {
 export const PERSONAS: Persona[] = [
   {
     role: "hq",
+    name: "Ananya Sharma",
+    initials: "AS",
+    title: "GM, Sales Logistics",
     label: "HMIL Sales Logistics (HQ)",
     org: "Sales Logistics HQ",
+    location: "Gurugram",
+    question: "Where is the national pipeline stuck right now?",
     username: "hq",
     password: "demo",
   },
   {
     role: "plant",
+    name: "Suresh Iyer",
+    initials: "SI",
+    title: "Dispatch Desk Lead",
     label: "Plant / Dispatch Desk",
     org: "Sriperumbudur Plant",
+    location: "Tamil Nadu",
+    question: "Which cars can I gate-out today?",
     username: "plant",
     password: "demo",
   },
   {
     role: "ro",
+    name: "Rakesh Mehta",
+    initials: "RM",
+    title: "Regional Manager",
     label: "Regional Office",
     org: "Chandigarh RO",
+    location: "Chandigarh",
+    question: "Which of my dealers is bleeding days?",
     username: "ro",
     password: "demo",
   },
   {
     role: "dealer",
+    name: "Rajesh Bansal",
+    initials: "RB",
+    title: "Dealer Principal",
     label: "Dealer",
-    org: "Krishna Hyundai, Chandigarh",
+    org: "Krishna Hyundai",
+    location: "Chandigarh",
+    question: "How many of my cars are at risk?",
     username: "dealer",
     password: "demo",
   },
   {
     role: "bank",
+    name: "Meera Nair",
+    initials: "MN",
+    title: "Dealer Finance Desk",
     label: "Bank",
-    org: "HDFC Dealer-Finance Desk",
+    org: "HDFC Bank",
+    location: "Mumbai",
+    question: "Which funding requests are still open?",
     username: "bank",
     password: "demo",
   },
   {
     role: "lsp",
+    name: "Vikram Singh",
+    initials: "VS",
+    title: "Fleet Controller",
     label: "LSP / Transporter",
     org: "Speedline Logistics",
+    location: "Chennai",
+    question: "Which trip is running late?",
     username: "lsp",
     password: "demo",
   },

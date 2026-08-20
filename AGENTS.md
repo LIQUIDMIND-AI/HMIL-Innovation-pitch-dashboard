@@ -53,15 +53,20 @@ icons, `recharts` for the two optional HQ charts only, React Context for state
 app/
   layout.tsx, globals.css        — root shell, design tokens
   login/page.tsx                 — persona picker + credential form
-  hq/ plant/ ro/ dealer/ bank/ lsp/page.tsx   — one dashboard per role
+  not-found.tsx                  — unknown URL → back to the session's home
+  hq/ plant/ ro/ dealer/ bank/ lsp/page.tsx   — one dashboard per role (+ sub-pages)
+  dealer/tracking, lsp/tracking  — live tracking screen (map + timeline)
   vehicle/[vin]/page.tsx         — shared VIN detail, content role-scoped
 components/
-  Sidebar, TopBar, KpiStrip, PipelineBoard, VehicleCard,
-  ExceptionList, CheckRail, DocCompare, NotesThread, RoleGate, StatusChip
+  DashboardShell, PersonaBar, Sidebar, KpiStrip, PipelineBoard, VehicleCard,
+  JourneyRail, ExceptionList, CheckRail, DocCompare, NotesThread, RoleGate,
+  StatusChip, Chatbot, ChatSnippet, TrackingBoard, TrackingMap, HqCharts
 lib/
-  types.ts       — Vehicle/Stage/CheckStatus/Role types
-  mockData.ts    — the 14 hardcoded vehicles (single source of truth for data)
+  types.ts       — Vehicle/Stage/CheckStatus/Role/Trip types
+  mockData.ts    — the 14 hardcoded vehicles + 2 trips (single source of truth for data)
   selectors.ts   — getVehiclesForRole() and all role-scoping logic
+  chatContent.ts — the canned per-persona chatbot scripts
+  roleTheme.ts   — role hues mirrored from CSS, for the per-persona favicon
   auth.tsx       — AuthContext (role, login/logout, sessionStorage)
   store.tsx      — VehicleStoreContext (client-state mutations: funding, gate pass,
                     milestones, notes) seeded from mockData.ts
@@ -76,8 +81,15 @@ lib/
 - Role scoping bugs are the most damaging kind of bug in this codebase: verify with
   the checklist in `plan.md` §11 (e.g. Dealer sees exactly its own cars, `/hq` while
   logged in as `dealer` redirects away) before considering a stage done.
-- Visual language: white/very light grey canvas, navy `#0B2447` primary, green
-  `#16A34A` = CLEAR, red `#DC2626` = STUCK, amber `#D97706` = pending/substitution.
-  No gradients, no glassmorphism, no dark mode. Monospace for VIN/chassis, tabular
-  numerals for amounts/timers.
+- Visual language ("The Control Tower", build plan v3): light working surfaces on
+  a `#F6F8FB` canvas, ink navy `#0B2447` reserved for the frame (persona bar, login,
+  chatbot header). Green `#16A34A` = CLEAR, red `#DC2626` = STUCK, amber `#D97706` =
+  pending/substitution. No gradients, no glassmorphism, no dark mode.
+- Each persona owns a **role hue**, set as `--role-hue` / `--role-tint` by the
+  `data-role` attribute on the app shell and consumed through the `role` /
+  `role-tint` Tailwind colours. Never hardcode a persona colour in a component.
+- Fonts: Fraunces (display) for page titles and KPI numbers only, Inter for all UI,
+  IBM Plex Mono (`.font-mono-vin`) for every identifier, amount and timestamp.
+- `JourneyRail` is the signature element: same grammar in `mini` / `compact` / `full`.
+  Polish it hardest; keep everything around it disciplined.
 - Keep `npm run build` and `npm run lint` clean before each commit.

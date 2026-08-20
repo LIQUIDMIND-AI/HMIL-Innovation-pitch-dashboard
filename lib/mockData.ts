@@ -1,4 +1,4 @@
-import type { Vehicle } from "./types";
+import type { Trip, Vehicle } from "./types";
 
 /**
  * Fixed reference instant for the whole demo. All "age" / SLA-breach timers
@@ -670,5 +670,86 @@ export const VEHICLES: Vehicle[] = [
       lastMilestone: "Delayed — held at Nagpur checkpoint for inspection, +2 days vs ETA",
     },
     notes: [],
+  },
+];
+
+/**
+ * Two seeded trips for the tracking screen — one running to promise, one two
+ * days late. Coordinates are in the TrackingMap viewBox (0 0 480 560); the
+ * paths are hardcoded so the truck animates identically on every load.
+ */
+const ROUTE_CHANDIGARH =
+  "M202,397 C198,360 194,320 190,283 C184,244 172,205 164,178 C162,168 160,157 158,148";
+const ROUTE_LUDHIANA =
+  "M202,397 C198,360 194,320 190,283 C184,244 172,205 164,178 C162,168 154,156 145,145";
+
+export const TRIPS: Trip[] = [
+  {
+    id: "TRP-CHD-2026-0118",
+    carrier: LSP_SPEEDLINE,
+    truckNo: "PB-11-AT-5590",
+    origin: "Sriperumbudur (TN)",
+    destination: "Chandigarh (PB)",
+    vins: ["MALBB51RLSM104003", "MALBB51RLSM104013"],
+    promiseDate: "2026-08-21",
+    etaDate: "2026-08-21",
+    status: "ON_TIME",
+    daysLate: 0,
+    progress: 0.62,
+    path: ROUTE_CHANDIGARH,
+    milestones: [
+      {
+        label: "Gate-out, Sriperumbudur",
+        at: "2026-08-17T08:10:00+05:30",
+        reached: true,
+        t: 0,
+        cx: 202,
+        cy: 397,
+      },
+      {
+        label: "Hub — Nagpur",
+        at: "2026-08-18T21:35:00+05:30",
+        reached: true,
+        t: 0.45,
+        cx: 190,
+        cy: 283,
+      },
+      { label: "Hub — Delhi", reached: false, t: 0.87, cx: 164, cy: 178 },
+      { label: "Dealer yard, Chandigarh", reached: false, t: 1, cx: 158, cy: 148 },
+    ],
+  },
+  {
+    id: "TRP-LDH-2026-0204",
+    carrier: LSP_SPEEDLINE,
+    truckNo: "PB-65-BT-3381",
+    origin: "Sriperumbudur (TN)",
+    destination: "Ludhiana (PB)",
+    vins: ["MALBB51RLSM104014"],
+    promiseDate: "2026-08-20",
+    etaDate: "2026-08-22",
+    status: "DELAYED",
+    daysLate: 2,
+    progress: 0.45,
+    path: ROUTE_LUDHIANA,
+    milestones: [
+      {
+        label: "Gate-out, Sriperumbudur",
+        at: "2026-08-16T07:45:00+05:30",
+        reached: true,
+        t: 0,
+        cx: 202,
+        cy: 397,
+      },
+      {
+        label: "Hub — Nagpur (held for inspection)",
+        at: "2026-08-18T13:20:00+05:30",
+        reached: true,
+        t: 0.45,
+        cx: 190,
+        cy: 283,
+      },
+      { label: "Hub — Delhi", reached: false, t: 0.87, cx: 164, cy: 178 },
+      { label: "Dealer yard, Ludhiana", reached: false, t: 1, cx: 145, cy: 145 },
+    ],
   },
 ];

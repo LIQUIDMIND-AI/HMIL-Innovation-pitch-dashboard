@@ -12,9 +12,5 @@ export default function RootPage() {
     router.replace(role ? `/${role}` : "/login");
   }, [role, router]);
 
-  return (
-    <div className="flex min-h-screen items-center justify-center text-sm text-ink-muted">
-      Loading…
-    </div>
-  );
+  return null;
 }
